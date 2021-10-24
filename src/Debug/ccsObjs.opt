@@ -1,0 +1,1 @@
+"./CC2650STK.obj" "./SensorBmp280.obj" "./SensorHdc1000.obj" "./SensorI2C.obj" "./SensorMpu9250.obj" "./SensorOpt3001.obj" "./SensorTmp007.obj" "./SensorUtil.obj" "./ccfg.obj" "./main.obj" "./mpu_utils.obj" "./test.obj" "../CC2650STK.cmd" -l"configPkg/linker.cmd" -l"C:/ti/tirtos_cc13xx_cc26xx_2_21_00_06/products/cc26xxware_2_24_03_17272/driverlib/bin/ccs/driverlib.lib" -llibc.a 
