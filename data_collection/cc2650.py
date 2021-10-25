@@ -219,6 +219,7 @@ class LEDAndBuzzer(Service):
 
 
 async def run(address):
+    lock = asyncio.Lock()
     async with BleakClient(address) as client:
         x = await client.is_connected()
         print("Connected: {0}".format(x))
@@ -284,14 +285,14 @@ async def run(address):
                         "gyro" : list_of_gyro,
                         "mag" : list_of_mag
                     }
+                async with lock:
+                    if df is None:
+                        df = getDataframeFromDatalist(datalist, address[-6:])
+                        saveDataframeToCsv(df, "out.csv")
 
-                if df is None:
-                    df = getDataframeFromDatalist(datalist, numDevice)
-                    saveDataframeToCsv(df, "out.csv")
-
-                else:
-                    df = appendDataToDataframe(df, datalist, numDevice)
-                    saveDataframeToCsv(df, "out.csv")
+                    else:
+                        df = appendDataToDataframe(df, datalist, address[-6:])
+                        saveDataframeToCsv(df, "out.csv")
 
                 cntr = 0
 
@@ -331,6 +332,7 @@ if __name__ == "__main__":
     addresses = [
         "54:6C:0E:53:3A:A1",
         # Apparently you add more addresses here.
+        "54:6C:0E:B6:DC:03",
     ]
     loop = asyncio.get_event_loop()
     loop.run_until_complete(main(addresses))

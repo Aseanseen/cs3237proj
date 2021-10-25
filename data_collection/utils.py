@@ -5,12 +5,10 @@ import os
 def getTimeStamp():
     return datetime.timestamp(datetime.now())
 
-def getDataframeFromDatalist(datalist, numDevice):
-
+def getDataframeFromDatalist(datalist, deviceId):
     dev_data = ["accX", "accY", "accZ", "magX", "magY", "magZ", "gyroX", "gyroY", "gyroZ"]
     column = ["Timestamp"] 
-    for i in range(numDevice):
-        column += [col + "_%d" % (i+1) for col in dev_data]
+    column += [col + "_%s" % (deviceId) for col in dev_data]
     print(column)
 
     tmp = []
@@ -19,21 +17,22 @@ def getDataframeFromDatalist(datalist, numDevice):
         tmp.append(
             [ datalist["acc"][id][0], *datalist["acc"][id][1], *datalist["gyro"][id][1], *datalist["mag"][id][1]]
         )
-
-    df = pd.DataFrame(tmp, columns = column)
-    return df
     
+        df = pd.DataFrame(tmp, columns = column)
+    return df
+
 
 def loadDataframeFromCsv(filename):
     df = pd.read_csv(filename)
     return df
 
 def saveDataframeToCsv(df, filename):
-    df.to_csv(filename, index = False)
+    with open(filename, "w") as f:
+        df.to_csv(f, index = False)
 
-def appendDataToDataframe(df, datalist, numDevice):
-    print(getDataframeFromDatalist(datalist, numDevice))
-    return pd.concat([df, getDataframeFromDatalist(datalist, numDevice)], ignore_index=True)
+def appendDataToDataframe(df, datalist, deviceId):
+    print(getDataframeFromDatalist(datalist, deviceId))
+    return pd.concat([df, getDataframeFromDatalist(datalist, deviceId)], ignore_index=True)
 
 
 if __name__ == "__main__":
