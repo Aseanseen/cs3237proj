@@ -219,6 +219,7 @@ class LEDAndBuzzer(Service):
 
 
 async def run(address):
+    postfix = address[-10:].replace(":", "_")
     lock = asyncio.Lock()
     async with BleakClient(address) as client:
         x = await client.is_connected()
@@ -251,8 +252,8 @@ async def run(address):
 
         numDevice = 1
 
-        if os.path.exists("out.csv"):
-            df = loadDataframeFromCsv("out.csv")
+        if os.path.exists("out_%s.csv" % postfix):
+            df = loadDataframeFromCsv("out_%s.csv" % postfix)
             print(df)
 
         while True:
@@ -287,12 +288,12 @@ async def run(address):
                     }
                 async with lock:
                     if df is None:
-                        df = getDataframeFromDatalist(datalist, address[-6:])
-                        saveDataframeToCsv(df, "out.csv")
+                        df = getDataframeFromDatalist(datalist, 1)
+                        saveDataframeToCsv(df, "out_%s.csv" % postfix)
 
                     else:
-                        df = appendDataToDataframe(df, datalist, address[-6:])
-                        saveDataframeToCsv(df, "out.csv")
+                        df = appendDataToDataframe(df, datalist, 1)
+                        saveDataframeToCsv(df, "out_%s.csv" % postfix)
 
                 cntr = 0
 
