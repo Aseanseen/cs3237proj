@@ -11,9 +11,24 @@ Adapted by Ashwin from the following sources:
 import asyncio
 import platform
 import struct
+import bleak
+import os
+import signal
+import sys
 
-from bleak import BleakClient
-from utils import (
+from bleak import (
+    BleakClient,
+    discover
+)
+from commons.commons import (
+    BLE_ADDR_LIST,
+    BLE_ADDR_TO_NAME
+)
+from utils.ble_utils import (
+    discover_sensors
+)
+
+from utils.utils import (
     appendDataToDataframe,
     getDataframeFromDatalist, 
     loadDataframeFromCsv, 
@@ -24,6 +39,10 @@ from utils import (
 list_of_acc = []
 list_of_mag = []
 list_of_gyro = []
+
+ble_client_dict = {}
+
+ble_queue = asyncio.Queue()
 
 class Service:
     """
@@ -107,46 +126,43 @@ class AccelerometerSensorMovementSensorMPU9250(MovementSensorMPU9250SubService):
         super().__init__()
         self.bits = MovementSensorMPU9250.ACCEL_XYZ | MovementSensorMPU9250.ACCEL_RANGE_4G
         self.scale = 8.0/32768.0 # TODO: why not 4.0, as documented? @Ashwin Need to verify
+        self.readings : list
 
     def cb_sensor(self, data):
         '''Returns (x_accel, y_accel, z_accel) in units of g'''
         rawVals = data[3:6]
         # print("[MovementSensor] Accelerometer:", tuple([ v*self.scale for v in rawVals ]))
-        list_of_acc.append(
-            [getTimeStamp(), tuple([ v*self.scale for v in rawVals ])]
-        )
-
+        self.readings = [getTimeStamp(), tuple([ v*self.scale for v in rawVals ])]
+        
 
 class MagnetometerSensorMovementSensorMPU9250(MovementSensorMPU9250SubService):
     def __init__(self):
         super().__init__()
         self.bits = MovementSensorMPU9250.MAG_XYZ
         self.scale = 4912.0 / 32760
+        self.readings : list
         # Reference: MPU-9250 register map v1.4
 
     def cb_sensor(self, data):
         '''Returns (x_mag, y_mag, z_mag) in units of uT'''
         rawVals = data[6:9]
         # print("[MovementSensor] Magnetometer:", tuple([ v*self.scale for v in rawVals ]))
-        list_of_mag.append(
-            [getTimeStamp(), tuple([ v*self.scale for v in rawVals ])]
-        )
-
+        self.readings = [getTimeStamp(), tuple([ v*self.scale for v in rawVals ])]
+        
 
 class GyroscopeSensorMovementSensorMPU9250(MovementSensorMPU9250SubService):
     def __init__(self):
         super().__init__()
         self.bits = MovementSensorMPU9250.GYRO_XYZ
         self.scale = 500.0/65536.0
+        self.readings : list
 
     def cb_sensor(self, data):
         '''Returns (x_gyro, y_gyro, z_gyro) in units of degrees/sec'''
         rawVals = data[0:3]
         # print("[MovementSensor] Gyroscope:", tuple([ v*self.scale for v in rawVals ]))
-        list_of_gyro.append(
-            [getTimeStamp(), tuple([ v*self.scale for v in rawVals ])]
-        )
-
+        self.readings = [getTimeStamp(), tuple([ v*self.scale for v in rawVals ])]
+        
 
 class OpticalSensor(Sensor):
     def __init__(self):
@@ -218,23 +234,13 @@ class LEDAndBuzzer(Service):
         await client.write_gatt_char(self.data_uuid, write_value)
 
 
-async def run(address):
-    lock = asyncio.Lock()
-    async with BleakClient(address) as client:
+async def run(address, postfix, queue):
+    ble_client = BleakClient(address, timeout = 10.0)
+    await ble_queue.put(ble_client)
+
+    async with ble_client as client:
         x = await client.is_connected()
-        print("Connected: {0}".format(x))
-
-        # led_and_buzzer = LEDAndBuzzer()
-
-        # light_sensor = OpticalSensor()
-        # await light_sensor.start_listener(client)
-
-        # humidity_sensor = HumiditySensor()
-        # await humidity_sensor.start_listener(client)
-
-        # barometer_sensor = BarometerSensor()
-        # await barometer_sensor.start_listener(client)
-
+        print("Connected!")
         acc_sensor = AccelerometerSensorMovementSensorMPU9250()
         gyro_sensor = GyroscopeSensorMovementSensorMPU9250()
         magneto_sensor = MagnetometerSensorMovementSensorMPU9250()
@@ -244,96 +250,124 @@ async def run(address):
         movement_sensor.register(gyro_sensor)
         movement_sensor.register(magneto_sensor)
         await movement_sensor.start_listener(client)    
-
         cntr = 0
 
-        df = None
-
-        numDevice = 1
-
-        if os.path.exists("out.csv"):
-            df = loadDataframeFromCsv("out.csv")
-            print(df)
-
+        acc_sensor_readings_list = []
+        gyro_sensor_readings_list = []
+        magneto_sensor_readings_list = []
         while True:
-            # we don't want to exit the "with" block initiating the client object as the connection is disconnected
-            # unless the object is stored
-            await asyncio.sleep(1.0)
-
-            # if cntr == 0:
-            #     # shine the red light
-            #     await led_and_buzzer.notify(client, 0x01)
-
-            # if cntr == 5:
-            #     # shine the green light
-            #     await led_and_buzzer.notify(client, 0x02)
-
+            await asyncio.sleep(0.5)
             cntr += 1
-
             if cntr == 10:
-                print(
-                    list_of_acc,
-                    "\n\n",
-                    list_of_gyro,
-                    "\n\n",
-                    list_of_mag,
-                    "\n\n",
-                )
-                datalist = \
-                    {
-                        "acc" : list_of_acc,
-                        "gyro" : list_of_gyro,
-                        "mag" : list_of_mag
-                    }
-                async with lock:
-                    if df is None:
-                        df = getDataframeFromDatalist(datalist, address[-6:])
-                        saveDataframeToCsv(df, "out.csv")
+                async with asyncio.Lock():
+                    datalist = \
+                        {
+                            "postfix" : postfix,
+                            "acc" : acc_sensor_readings_list,
+                            "gyro" : gyro_sensor_readings_list,
+                            "mag" : magneto_sensor_readings_list
+                        }
+                    
+                    print("here", datalist)
 
-                    else:
-                        df = appendDataToDataframe(df, datalist, address[-6:])
-                        saveDataframeToCsv(df, "out.csv")
-
+                    await queue.put(datalist)
+                    print("1")
+                    await queue.join()
+                    print("wait")
                 cntr = 0
+                acc_sensor_readings_list = []
+                gyro_sensor_readings_list = []
+                magneto_sensor_readings_list = []
+            else:
+                acc_sensor_readings_list.append(acc_sensor.readings)
+                gyro_sensor_readings_list.append(gyro_sensor.readings)
+                magneto_sensor_readings_list.append(magneto_sensor.readings)
+
+            
+async def controller(queue):
+    classification = sys.argv[1]
+    df = None
 
 
-# if __name__ == "__main__":
-#     """
-#     To find the address, once your sensor tag is blinking the green led after pressing the button, run the discover.py
-#     file which was provided as an example from bleak to identify the sensor tag device
-#     """
+    if os.path.exists("out.csv"):
+        df = loadDataframeFromCsv("out.csv")
+        print(df)
 
-#     import os
+    datetime_now = getTimeStamp()
 
-#     os.environ["PYTHONASYNCIODEBUG"] = str(1)
-#     address = (
-#         # "54:6c:0e:b5:56:00"
-#         "54:6C:0E:53:3A:A1"
-#         if platform.system() != "Darwin"
-#         else "6FFBA6AE-0802-4D92-B1CD-041BE4B4FEB9"
-#     )
-#     loop = asyncio.get_event_loop()
-#     loop.run_until_complete(run(address))
-#     loop.run_forever()
+    while(1):
+        
+        if (getTimeStamp() - datetime_now) >= 120:
+            print("Data collection done!")
+            return
 
-def main(addresses):
-    return asyncio.gather(*(run(address) for address in addresses))
+        print("Time left --- %d\n" % (120 - (getTimeStamp() - datetime_now)))
+
+
+        datalists = []
+        postfixes = []
+        print("hi")
+        for i in range(len(BLE_ADDR_LIST)):
+            datalist = await queue.get()
+            print("there", datalist)
+            postfixes.append(datalist.pop("postfix"))
+            datalists.append(datalist)
+            
+        
+        if df is None:
+            df = getDataframeFromDatalist(datalists, postfixes, classification)
+        else: 
+            df = appendDataToDataframe(df, datalists, postfixes, classification)
+
+        for i in range(len(BLE_ADDR_LIST)):
+            queue.task_done()
+
+        saveDataframeToCsv(df, "out.csv")
+        
+        
+
+        await asyncio.sleep(1)
+
+
+
+
+async def main(queue):
+    while not await discover_sensors():
+        print("waiting")
+        await asyncio.sleep(1.0)
+
+    await asyncio.gather(*(run(address, BLE_ADDR_TO_NAME[address], queue) for address in BLE_ADDR_LIST), controller(queue))
+
+async def handleException():
+    while not ble_queue.empty():
+        client = await ble_queue.get()
+        await client.disconnect()
 
 if __name__ == "__main__":
     """
     To find the address, once your sensor tag is blinking the green led after pressing the button, run the discover.py
     file which was provided as an example from bleak to identify the sensor tag device
     """
+    data_queue = asyncio.Queue(maxsize=2)
 
-    # KW: https://github.com/hbldh/bleak/issues/345
-    import os
+    if len(sys.argv) < 2:
+        print("Enter the category!")
+        sys.exit()
+    
 
+    # KW: https://github.com/hbldh/bleak/issues/345 
+    
+    print(
+        "Collecting ground truth labels for category %s --- 60 seconds!" % sys.argv[1]
+    )
     os.environ["PYTHONASYNCIODEBUG"] = str(1)
-    addresses = [
-        "54:6C:0E:53:3A:A1",
-        # Apparently you add more addresses here.
-        "54:6C:0E:B6:DC:03",
-    ]
     loop = asyncio.get_event_loop()
-    loop.run_until_complete(main(addresses))
-    loop.run_forever()
+
+    try:
+        loop.run_until_complete(main(data_queue))
+        loop.run_forever()
+    except KeyboardInterrupt:
+        loop = asyncio.get_event_loop()
+        loop.run_until_complete(handleException())
+        loop.close()
+
