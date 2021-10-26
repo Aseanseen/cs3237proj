@@ -44,6 +44,8 @@ ble_client_dict = {}
 
 ble_queue = asyncio.Queue()
 
+time_to_record: int
+
 class Service:
     """
     Here is a good documentation about the concepts in ble;
@@ -286,6 +288,7 @@ async def run(address, postfix, queue):
             
 async def controller(queue):
     classification = sys.argv[1]
+    time_to_test = sys.argv[2]
     df = None
 
 
@@ -297,11 +300,11 @@ async def controller(queue):
 
     while(1):
         
-        if (getTimeStamp() - datetime_now) >= 120:
+        if (getTimeStamp() - datetime_now) >= time_to_test:
             print("Data collection done!")
             return
 
-        print("Time left --- %d\n" % (120 - (getTimeStamp() - datetime_now)))
+        print("Time left --- %d\n" % (time_to_test - (getTimeStamp() - datetime_now)))
 
 
         datalists = []
@@ -350,15 +353,15 @@ if __name__ == "__main__":
     """
     data_queue = asyncio.Queue(maxsize=2)
 
-    if len(sys.argv) < 2:
-        print("Enter the category!")
+    if len(sys.argv) < 3:
+        print("Enter the category! and time! ")
         sys.exit()
     
 
     # KW: https://github.com/hbldh/bleak/issues/345 
     
     print(
-        "Collecting ground truth labels for category %s --- 60 seconds!" % sys.argv[1]
+        "Collecting ground truth labels for category %s --- %s seconds!" % (sys.argv[1], sys.argv[2])
     )
     os.environ["PYTHONASYNCIODEBUG"] = str(1)
     loop = asyncio.get_event_loop()
