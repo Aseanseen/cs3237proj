@@ -288,7 +288,7 @@ async def run(address, postfix, queue):
             
 async def controller(queue):
     classification = sys.argv[1]
-    time_to_test = sys.argv[2]
+    time_to_test = float(sys.argv[2])
     df = None
 
 
@@ -346,6 +346,11 @@ async def handleException():
         client = await ble_queue.get()
         await client.disconnect()
 
+async def handleException_(loop):
+    loop = asyncio.get_event_loop()
+    loop.run_until_complete(handleException())
+    loop.close()
+
 if __name__ == "__main__":
     """
     To find the address, once your sensor tag is blinking the green led after pressing the button, run the discover.py
@@ -369,8 +374,10 @@ if __name__ == "__main__":
     try:
         loop.run_until_complete(main(data_queue))
         loop.run_forever()
-    except KeyboardInterrupt:
+        loop.set_exception_handler(handleException_)
+    except:
         loop = asyncio.get_event_loop()
         loop.run_until_complete(handleException())
         loop.close()
+
 
