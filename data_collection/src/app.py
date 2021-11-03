@@ -235,132 +235,189 @@ class LEDAndBuzzer(Service):
         write_value = bytearray([code])
         await client.write_gatt_char(self.data_uuid, write_value)
 
+# async def disconnected_callback(ble_client):
+#     print("Client with address {} got disconnected!".format(ble_client.address))
+#     while not await discover_sensors():
+#         print("waiting for sensors")
+#         # await asyncio.sleep(1.0)
 
-async def run(address, postfix, queue):
-    ble_client = BleakClient(address, timeout = 10.0)
-    await ble_queue.put(ble_client)
+def on_disconnect(client: BleakClient):
+    # Put code here to handle what happens on disconnet.
+    print(f"Disconnected from bleak {BLE_ADDR_TO_NAME[client.address]}!")
 
-    async with ble_client as client:
-        x = await client.is_connected()
-        print("Connected!")
-        acc_sensor = AccelerometerSensorMovementSensorMPU9250()
-        gyro_sensor = GyroscopeSensorMovementSensorMPU9250()
-        magneto_sensor = MagnetometerSensorMovementSensorMPU9250()
+async def run(address, postfix):
+    # print("starting", address, "loop")
+    # async with BleakClient(address, timeout=5.0) as client:
+    #     print("connect to", address)
 
-        movement_sensor = MovementSensorMPU9250()
-        movement_sensor.register(acc_sensor)
-        movement_sensor.register(gyro_sensor)
-        movement_sensor.register(magneto_sensor)
-        await movement_sensor.start_listener(client)    
-        cntr = 0
+    # ble_client = BleakClient(address, timeout = 10.0)
+    
+    # ble_client.set_disconnected_callback(disconnected_callback)
 
-        acc_sensor_readings_list = []
-        gyro_sensor_readings_list = []
-        magneto_sensor_readings_list = []
+    # await ble_queue.put(ble_client)
+    # print ("Queue: "+[q_item for q_item in ble_queue])
+
+    async with BleakClient(address, timeout = 15) as client:
+        if client.is_connected:
+            client.set_disconnected_callback(on_disconnect)
+            print(postfix + " bleak is connected!")
+
+            await asyncio.sleep(5) # To let the rest of the sensors use Bleak
+            
+            acc_sensor = AccelerometerSensorMovementSensorMPU9250()
+            gyro_sensor = GyroscopeSensorMovementSensorMPU9250()
+            magneto_sensor = MagnetometerSensorMovementSensorMPU9250()
+            movement_sensor = MovementSensorMPU9250()
+
+            movement_sensor.register(acc_sensor)
+            movement_sensor.register(gyro_sensor)
+            movement_sensor.register(magneto_sensor)
+
+            try:
+                print("Listening to " + postfix + " bleak")
+                await movement_sensor.start_listener(client)
+            except Exception as e:
+                print("Fail to start " + postfix + "bleak listener")
+                print(e)
         while True:
-            await asyncio.sleep(0.5)
-            cntr += 1
-            if cntr == 10:
-                async with asyncio.Lock():
-                    datalist = \
-                        {
-                            "postfix" : postfix,
-                            "acc" : acc_sensor_readings_list,
-                            "gyro" : gyro_sensor_readings_list,
-                            "mag" : magneto_sensor_readings_list
-                        }
+            await asyncio.sleep(5) # Without await, the bleak listener cannot launch the readings, giving errors
+            try:
+                if not client.is_connected:
+                    print("bleak client for " + postfix + " not connected")
+                    raise Exception
+                print(postfix + ":acc " + str(acc_sensor.readings))
+                print(postfix + ":gyro " + str(gyro_sensor.readings))
+                print(postfix + ":mag " + str(magneto_sensor.readings))
+            except Exception as e:
+                raise e
+        # print("Raising DisconnectException")
+        # raise DisconnectException
+
+        # else:
+        #     print("Disconnected")
+
+        # while True:
+            # await asyncio.sleep(0.5)
+            # cntr += 1
+            # if cntr == 10:
+            #     async with asyncio.Lock():
+            #         datalist = \
+            #             {
+            #                 "postfix" : postfix,
+            #                 "acc" : acc_sensor_readings_list,
+            #                 "gyro" : gyro_sensor_readings_list,
+            #                 "mag" : magneto_sensor_readings_list
+            #             }
                     
-                    print("here", datalist)
+            #         print("here", datalist)
 
-                    await queue.put(datalist)
-                    print("1")
-                    await queue.join()
-                    print("wait")
-                cntr = 0
-                acc_sensor_readings_list = []
-                gyro_sensor_readings_list = []
-                magneto_sensor_readings_list = []
-            else:
-                acc_sensor_readings_list.append(acc_sensor.readings)
-                gyro_sensor_readings_list.append(gyro_sensor.readings)
-                magneto_sensor_readings_list.append(magneto_sensor.readings)
+            #         await queue.put(datalist)
+            #         print("1")
+            #         await queue.join()
+            #         print("wait")
+            #     cntr = 0
+            #     acc_sensor_readings_list = []
+            #     gyro_sensor_readings_list = []
+            #     magneto_sensor_readings_list = []
+            # else:
+            #     acc_sensor_readings_list.append(acc_sensor.readings)
+            #     gyro_sensor_readings_list.append(gyro_sensor.readings)
+            #     magneto_sensor_readings_list.append(magneto_sensor.readings)
 
             
-async def controller(queue):
-    classification = sys.argv[1]
-    time_to_test = float(sys.argv[2])
-    df = None
+# async def controller(queue):
+#     classification = sys.argv[1]
+#     time_to_test = float(sys.argv[2])
+#     df = None
 
 
-    if os.path.exists("out.csv"):
-        df = loadDataframeFromCsv("out.csv")
-        print(df)
+#     if os.path.exists("out.csv"):
+#         df = loadDataframeFromCsv("out.csv")
+#         print(df)
 
-    datetime_now = getTimeStamp()
+#     datetime_now = getTimeStamp()
 
-    while(1):
+#     while(1):
         
-        if (getTimeStamp() - datetime_now) >= time_to_test:
-            print("Data collection done!")
-            return
+#         if (getTimeStamp() - datetime_now) >= time_to_test:
+#             print("Data collection done!")
+#             return
 
-        print("Time left --- %d\n" % (time_to_test - (getTimeStamp() - datetime_now)))
+#         print("Time left --- %d\n" % (time_to_test - (getTimeStamp() - datetime_now)))
 
 
-        datalists = []
-        postfixes = []
-        print("hi")
-        for i in range(len(BLE_ADDR_LIST)):
-            datalist = await queue.get()
-            print("there", datalist)
-            postfixes.append(datalist.pop("postfix"))
-            datalists.append(datalist)
+#         datalists = []
+#         postfixes = []
+#         print("hi")
+#         for i in range(len(BLE_ADDR_LIST)):
+#             datalist = await queue.get()
+#             print("there", datalist)
+#             postfixes.append(datalist.pop("postfix"))
+#             datalists.append(datalist)
             
         
-        if df is None:
-            df = getDataframeFromDatalist(datalists, postfixes, classification)
-        else: 
-            df = appendDataToDataframe(df, datalists, postfixes, classification)
+#         if df is None:
+#             df = getDataframeFromDatalist(datalists, postfixes, classification)
+#         else: 
+#             df = appendDataToDataframe(df, datalists, postfixes, classification)
 
-        for i in range(len(BLE_ADDR_LIST)):
-            queue.task_done()
+#         for i in range(len(BLE_ADDR_LIST)):
+#             queue.task_done()
 
-        saveDataframeToCsv(df, "out.csv")
+#         saveDataframeToCsv(df, "out.csv")
         
         
 
-        await asyncio.sleep(1)
+#         await asyncio.sleep(1)
 
 
+# async def connectionManager():
+#     while not await discover_sensors():
+#         print("waiting for sensors")
+#         await asyncio.sleep(1.0)
 
+# https://stackoverflow.com/questions/59073556/how-to-cancel-all-remaining-tasks-in-gather-if-one-fails
+async def main():
+    while True:
+        # await asyncio.wait_for(discover_sensors(), timeout=20)
+        while not await discover_sensors():
+            print("waiting for sensors")
+            # await asyncio.sleep(1.0)
+        try:
+            tasks = [asyncio.ensure_future(run(address, BLE_ADDR_TO_NAME[address])) for address in BLE_ADDR_LIST]
+            await asyncio.gather(*tasks)
+        except Exception as e:
+            print("Something messed up. Cancelling everything")
+            print(e)
+            for t in tasks:
+                t.cancel()
+            print("Restarting loop in 5 seconds")
+            await asyncio.sleep(5)
+            print("Restarting...")
+        # finally:
+        #     await asyncio.sleep(1)
+    # except Exception as e:
+    #     print(e)
+# async def handleException():
+#     while not ble_queue.empty():
+#         client = await ble_queue.get()
+#         await client.disconnect()
 
-async def main(queue):
-    while not await discover_sensors():
-        print("waiting")
-        await asyncio.sleep(1.0)
-
-    await asyncio.gather(*(run(address, BLE_ADDR_TO_NAME[address], queue) for address in BLE_ADDR_LIST), controller(queue))
-
-async def handleException():
-    while not ble_queue.empty():
-        client = await ble_queue.get()
-        await client.disconnect()
-
-async def handleException_(loop):
-    loop = asyncio.get_event_loop()
-    loop.run_until_complete(handleException())
-    loop.close()
+# async def handleException_(loop):
+#     loop = asyncio.get_event_loop()
+#     loop.run_until_complete(handleException())
+#     loop.close()
 
 if __name__ == "__main__":
     """
     To find the address, once your sensor tag is blinking the green led after pressing the button, run the discover.py
     file which was provided as an example from bleak to identify the sensor tag device
     """
-    data_queue = asyncio.Queue(maxsize=2)
+    # data_queue = asyncio.Queue(maxsize=2)
 
-    if len(sys.argv) < 3:
-        print("Enter the category! and time! ")
-        sys.exit()
+    # if len(sys.argv) < 3:
+    #     print("Enter the category! and time! ")
+    #     sys.exit()
     
 
     # KW: https://github.com/hbldh/bleak/issues/345 
@@ -369,15 +426,35 @@ if __name__ == "__main__":
         "Collecting ground truth labels for category %s --- %s seconds!" % (sys.argv[1], sys.argv[2])
     )
     os.environ["PYTHONASYNCIODEBUG"] = str(1)
+
+    # futures = [main(), connectionManager()]
     loop = asyncio.get_event_loop()
 
+    # loop.run_until_complete(main())
+    # asyncio.gather(*(futures))
+
+    # asyncio.ensure_future(main())
+    # asyncio.ensure_future(connectionManager())
+    # loop.run_forever()
     try:
-        loop.run_until_complete(main(data_queue))
-        loop.run_forever()
-        loop.set_exception_handler(handleException_)
-    except:
-        loop = asyncio.get_event_loop()
-        loop.run_until_complete(handleException())
+        loop.run_until_complete(main())
+        # print("Main")
+        # loop.run_forever()
+    except Exception as e:
+        print(e)
         loop.close()
+
+    # loop.close()
+
+    # loop = asyncio.get_event_loop()
+
+    # try:
+    #     loop.run_until_complete(main(data_queue))
+    #     loop.run_forever()
+    #     loop.set_exception_handler(handleException_)
+    # except:
+        # loop = asyncio.get_event_loop()
+    #     loop.run_until_complete(handleException())
+    #     loop.close()
 
 
