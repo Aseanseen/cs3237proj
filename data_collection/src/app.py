@@ -16,13 +16,19 @@ import os
 import signal
 import sys
 
+TIME_BETWEEN_READINGS = 5 # seconds
+
 from bleak import (
     BleakClient,
     discover
 )
 from commons.commons import (
     BLE_ADDR_LIST,
-    BLE_ADDR_TO_NAME
+    BLE_ADDR_TO_NAME,
+    BLE_NAME_SENSOR_NECK,
+    BLE_NAME_SENSOR_SHOULDER_L,
+    BLE_NAME_SENSOR_SHOULDER_R,
+    BLE_NAME_SENSOR_BACK
 )
 from utils.ble_utils import (
     discover_sensors
@@ -35,16 +41,6 @@ from utils.utils import (
     saveDataframeToCsv,
     getTimeStamp
 )
-
-list_of_acc = []
-list_of_mag = []
-list_of_gyro = []
-
-ble_client_dict = {}
-
-ble_queue = asyncio.Queue()
-
-time_to_record: int
 
 class Service:
     """
@@ -235,35 +231,17 @@ class LEDAndBuzzer(Service):
         write_value = bytearray([code])
         await client.write_gatt_char(self.data_uuid, write_value)
 
-# async def disconnected_callback(ble_client):
-#     print("Client with address {} got disconnected!".format(ble_client.address))
-#     while not await discover_sensors():
-#         print("waiting for sensors")
-#         # await asyncio.sleep(1.0)
-
+# On disconnect from a bleak client, this function is called
 def on_disconnect(client: BleakClient):
-    # Put code here to handle what happens on disconnet.
     print(f"Disconnected from bleak {BLE_ADDR_TO_NAME[client.address]}!")
 
-async def run(address, postfix):
-    # print("starting", address, "loop")
-    # async with BleakClient(address, timeout=5.0) as client:
-    #     print("connect to", address)
-
-    # ble_client = BleakClient(address, timeout = 10.0)
-    
-    # ble_client.set_disconnected_callback(disconnected_callback)
-
-    # await ble_queue.put(ble_client)
-    # print ("Queue: "+[q_item for q_item in ble_queue])
-
+async def run(address, postfix, flag, flags):
     async with BleakClient(address, timeout = 15) as client:
+        # Upon bleak client connect, register all the sensors
         if client.is_connected:
             client.set_disconnected_callback(on_disconnect)
             print(postfix + " bleak is connected!")
 
-            await asyncio.sleep(5) # To let the rest of the sensors use Bleak
-            
             acc_sensor = AccelerometerSensorMovementSensorMPU9250()
             gyro_sensor = GyroscopeSensorMovementSensorMPU9250()
             magneto_sensor = MagnetometerSensorMovementSensorMPU9250()
@@ -273,119 +251,73 @@ async def run(address, postfix):
             movement_sensor.register(gyro_sensor)
             movement_sensor.register(magneto_sensor)
 
+            # Start listener for the device
             try:
-                print("Listening to " + postfix + " bleak")
+                print("Starting listener for " + postfix)
                 await movement_sensor.start_listener(client)
             except Exception as e:
-                print("Fail to start " + postfix + "bleak listener")
+                print("Fail to start bleak listener for " + postfix)
                 print(e)
+        # Once connected the client should not disconnect
+        # If it does, exception is raised
         while True:
-            await asyncio.sleep(5) # Without await, the bleak listener cannot launch the readings, giving errors
+            await asyncio.sleep(TIME_BETWEEN_READINGS) # Without await, the bleak listener cannot update the readings array, giving errors
             try:
+                # Check if client is connected, if not raise Exception
                 if not client.is_connected:
-                    print("bleak client for " + postfix + " not connected")
+                    print("Bleak client for " + postfix + " not connected")
+                    flag.clear()
                     raise Exception
+
+                # Set bleak client's flag since bleak client is connected
+                if not flag.is_set():
+                    flag.set()
+                
+                # Wait for all the flags to be set before taking readings
+                for f in flags:
+                    await f.wait()
+
+                # Print all the data collected for all the devices
+                print("--------------------")
+                print("All flags: " + str(all(f.is_set() for f in flags)))
                 print(postfix + ":acc " + str(acc_sensor.readings))
                 print(postfix + ":gyro " + str(gyro_sensor.readings))
                 print(postfix + ":mag " + str(magneto_sensor.readings))
+                print("--------------------")
+
             except Exception as e:
                 raise e
-        # print("Raising DisconnectException")
-        # raise DisconnectException
-
-        # else:
-        #     print("Disconnected")
-
-        # while True:
-            # await asyncio.sleep(0.5)
-            # cntr += 1
-            # if cntr == 10:
-            #     async with asyncio.Lock():
-            #         datalist = \
-            #             {
-            #                 "postfix" : postfix,
-            #                 "acc" : acc_sensor_readings_list,
-            #                 "gyro" : gyro_sensor_readings_list,
-            #                 "mag" : magneto_sensor_readings_list
-            #             }
-                    
-            #         print("here", datalist)
-
-            #         await queue.put(datalist)
-            #         print("1")
-            #         await queue.join()
-            #         print("wait")
-            #     cntr = 0
-            #     acc_sensor_readings_list = []
-            #     gyro_sensor_readings_list = []
-            #     magneto_sensor_readings_list = []
-            # else:
-            #     acc_sensor_readings_list.append(acc_sensor.readings)
-            #     gyro_sensor_readings_list.append(gyro_sensor.readings)
-            #     magneto_sensor_readings_list.append(magneto_sensor.readings)
-
-            
-# async def controller(queue):
-#     classification = sys.argv[1]
-#     time_to_test = float(sys.argv[2])
-#     df = None
-
-
-#     if os.path.exists("out.csv"):
-#         df = loadDataframeFromCsv("out.csv")
-#         print(df)
-
-#     datetime_now = getTimeStamp()
-
-#     while(1):
-        
-#         if (getTimeStamp() - datetime_now) >= time_to_test:
-#             print("Data collection done!")
-#             return
-
-#         print("Time left --- %d\n" % (time_to_test - (getTimeStamp() - datetime_now)))
-
-
-#         datalists = []
-#         postfixes = []
-#         print("hi")
-#         for i in range(len(BLE_ADDR_LIST)):
-#             datalist = await queue.get()
-#             print("there", datalist)
-#             postfixes.append(datalist.pop("postfix"))
-#             datalists.append(datalist)
-            
-        
-#         if df is None:
-#             df = getDataframeFromDatalist(datalists, postfixes, classification)
-#         else: 
-#             df = appendDataToDataframe(df, datalists, postfixes, classification)
-
-#         for i in range(len(BLE_ADDR_LIST)):
-#             queue.task_done()
-
-#         saveDataframeToCsv(df, "out.csv")
-        
-        
-
-#         await asyncio.sleep(1)
-
-
-# async def connectionManager():
-#     while not await discover_sensors():
-#         print("waiting for sensors")
-#         await asyncio.sleep(1.0)
 
 # https://stackoverflow.com/questions/59073556/how-to-cancel-all-remaining-tasks-in-gather-if-one-fails
 async def main():
     while True:
-        # await asyncio.wait_for(discover_sensors(), timeout=20)
+        # This finds the bluetooth devices and will not exit untill all devices are visible. However, this does not connect to the devices.
         while not await discover_sensors():
             print("waiting for sensors")
-            # await asyncio.sleep(1.0)
         try:
-            tasks = [asyncio.ensure_future(run(address, BLE_ADDR_TO_NAME[address])) for address in BLE_ADDR_LIST]
+            # Create flags for each sensor to signal whene each bleak client is connected for each sensor
+            neck_Flag = asyncio.Event()
+            back_Flag = asyncio.Event()
+            shoulder_r_Flag = asyncio.Event()
+            shoulder_l_Flag = asyncio.Event()
+            flags = [neck_Flag, back_Flag, shoulder_r_Flag, shoulder_l_Flag]
+
+            # switcher is a switch case statement but in python
+            switcher = {
+                BLE_NAME_SENSOR_NECK: neck_Flag,
+                BLE_NAME_SENSOR_BACK: back_Flag,
+                BLE_NAME_SENSOR_SHOULDER_L: shoulder_l_Flag,
+                BLE_NAME_SENSOR_SHOULDER_R: shoulder_r_Flag
+            }
+
+            # Create a list of tasks using list comprehension
+            tasks = [asyncio.ensure_future(run(address, BLE_ADDR_TO_NAME[address], switcher.get(BLE_ADDR_TO_NAME[address]), flags)) for address in BLE_ADDR_LIST]
+            
+            # Wait for all tasks
             await asyncio.gather(*tasks)
+
+        # Any error, such as an unexpected disconnect from a device, will come here and restart the loop
+        # This disconnects from every sensor safely and reconnects again
         except Exception as e:
             print("Something messed up. Cancelling everything")
             print(e)
@@ -394,67 +326,26 @@ async def main():
             print("Restarting loop in 5 seconds")
             await asyncio.sleep(5)
             print("Restarting...")
-        # finally:
-        #     await asyncio.sleep(1)
-    # except Exception as e:
-    #     print(e)
-# async def handleException():
-#     while not ble_queue.empty():
-#         client = await ble_queue.get()
-#         await client.disconnect()
-
-# async def handleException_(loop):
-#     loop = asyncio.get_event_loop()
-#     loop.run_until_complete(handleException())
-#     loop.close()
 
 if __name__ == "__main__":
     """
     To find the address, once your sensor tag is blinking the green led after pressing the button, run the discover.py
     file which was provided as an example from bleak to identify the sensor tag device
     """
-    # data_queue = asyncio.Queue(maxsize=2)
-
-    # if len(sys.argv) < 3:
-    #     print("Enter the category! and time! ")
-    #     sys.exit()
-    
 
     # KW: https://github.com/hbldh/bleak/issues/345 
     
     print(
-        "Collecting ground truth labels for category %s --- %s seconds!" % (sys.argv[1], sys.argv[2])
+        "Starting the program"
     )
     os.environ["PYTHONASYNCIODEBUG"] = str(1)
 
-    # futures = [main(), connectionManager()]
     loop = asyncio.get_event_loop()
 
-    # loop.run_until_complete(main())
-    # asyncio.gather(*(futures))
-
-    # asyncio.ensure_future(main())
-    # asyncio.ensure_future(connectionManager())
-    # loop.run_forever()
+    # Runs the loop forever since main() has a while True loop
     try:
         loop.run_until_complete(main())
-        # print("Main")
-        # loop.run_forever()
+    # Something unexpected happened, whole program will close
     except Exception as e:
         print(e)
         loop.close()
-
-    # loop.close()
-
-    # loop = asyncio.get_event_loop()
-
-    # try:
-    #     loop.run_until_complete(main(data_queue))
-    #     loop.run_forever()
-    #     loop.set_exception_handler(handleException_)
-    # except:
-        # loop = asyncio.get_event_loop()
-    #     loop.run_until_complete(handleException())
-    #     loop.close()
-
-
