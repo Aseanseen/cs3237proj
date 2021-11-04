@@ -76,14 +76,14 @@ def setup(hostname):
     client.connect(hostname)
     client.loop_start()
     return client
-
+      
 def load_image(filename):
     img = Image.open(filename)
     img = img.resize((249, 249))
     imgarray = np.array(img) / 255.0
     final = np.expand_dims(imgarray, axis = 0)
-    return final
-
+    return final 
+       
 def get_data_func():
     # To inteface with gateway ble functions
     return SAMPLE_DATA
@@ -96,9 +96,9 @@ def main():
     # The global constant variable PATH holds the 
     # relative path to the samples folder. 
     global PATH
-    client = setup("13.59.198.52")
-    # client = setup("127.0.0.1")
-    print("Sending data.")       
+    # client = setup("13.59.198.52")
+    client = setup("127.0.0.1") 
+    print("Sending data.")        
 
     send_data(client)
     # After all the files are sent over, 

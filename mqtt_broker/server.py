@@ -72,8 +72,8 @@ def on_message(client, userdata, msg):
     """
     HTTP
     """
-    # response = requests.put(url_post, params = acc_dict)
-    # print(response)
+    response = requests.put(url_post, params = acc_dict)
+    print(response)
 
 
 
