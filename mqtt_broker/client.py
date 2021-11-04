@@ -96,8 +96,8 @@ def main():
     # The global constant variable PATH holds the 
     # relative path to the samples folder. 
     global PATH
-    # client = setup("13.59.198.52")
-    client = setup("127.0.0.1") 
+    client = setup("13.59.198.52")
+    # client = setup("127.0.0.1") 
     print("Sending data.")        
 
     send_data(client)
