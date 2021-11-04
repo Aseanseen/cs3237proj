@@ -17,7 +17,18 @@ import signal
 import sys
 import json
 
+import paho.mqtt.client as mqtt
+import numpy as np
+from os import listdir
+from os.path import join
+from time import (
+    sleep
+)
+
 TIME_BETWEEN_READINGS = 5 # seconds
+PATH = "./samples"
+MQTT_TOPIC_CLASSIFY = "Group_B2/IMAGE/classify"
+MQTT_TOPIC_PREDICT = "Group_B2/IMAGE/predict"
 
 from bleak import (
     BleakClient,
@@ -237,7 +248,7 @@ class LEDAndBuzzer(Service):
 def on_disconnect(client: BleakClient):
     print(f"Disconnected from bleak {BLE_ADDR_TO_NAME[client.address]}!")
 
-async def run(address, postfix, flag, flags):
+async def run(address, postfix, flag, flags, mqtt_flag):
     async with BleakClient(address, timeout = 15) as client:
         # Upon bleak client connect, register all the sensors
         if client.is_connected:
@@ -311,11 +322,14 @@ async def run(address, postfix, flag, flags):
                 filename = postfix + ".json"
                 with open(filename, "w") as outfile:
                     outfile.write(json_object)
+                # Set mqtt flag after writing to json
+                if not mqtt_flag.is_set():
+                    mqtt_flag.set()
             except Exception as e:
                 raise e
 
 # https://stackoverflow.com/questions/59073556/how-to-cancel-all-remaining-tasks-in-gather-if-one-fails
-async def main():
+async def main(mqtt_client):
     while True:
         # This finds the bluetooth devices and will not exit untill all devices are visible. However, this does not connect to the devices.
         while not await discover_sensors():
@@ -335,10 +349,25 @@ async def main():
                 BLE_NAME_SENSOR_SHOULDER_L: shoulder_l_Flag,
                 BLE_NAME_SENSOR_SHOULDER_R: shoulder_r_Flag
             }
+            
+            # Create flags for each sensor to signal whene each bleak client is connected for each sensor
+            mqtt_neck_Flag = asyncio.Event()
+            mqtt_back_Flag = asyncio.Event()
+            mqtt_shoulder_r_Flag = asyncio.Event()
+            mqtt_shoulder_l_Flag = asyncio.Event()
+
+            mqtt_flags = [mqtt_neck_Flag, mqtt_back_Flag, mqtt_shoulder_r_Flag, mqtt_shoulder_l_Flag]
+            # mqtt_switcher is a switch case statement but in python
+            mqtt_switcher = {
+                BLE_NAME_SENSOR_NECK: mqtt_neck_Flag,
+                BLE_NAME_SENSOR_BACK: mqtt_back_Flag,
+                BLE_NAME_SENSOR_SHOULDER_L: mqtt_shoulder_l_Flag,
+                BLE_NAME_SENSOR_SHOULDER_R: mqtt_shoulder_r_Flag
+            }
 
             # Create a list of tasks using list comprehension
-            tasks = [asyncio.ensure_future(run(address, BLE_ADDR_TO_NAME[address], switcher.get(BLE_ADDR_TO_NAME[address]), flags)) for address in BLE_ADDR_LIST]
-            
+            tasks = [asyncio.ensure_future(run(address, BLE_ADDR_TO_NAME[address], switcher.get(BLE_ADDR_TO_NAME[address]), flags, mqtt_switcher.get(BLE_ADDR_TO_NAME[address]))) for address in BLE_ADDR_LIST]
+            tasks.append(asyncio.ensure_future(mqtt_watcher(mqtt_client, mqtt_flags)))
             # Wait for all tasks
             await asyncio.gather(*tasks)
 
@@ -352,6 +381,58 @@ async def main():
             print("Restarting loop in 5 seconds")
             await asyncio.sleep(5)
             print("Restarting...")
+
+def on_connect(client, userdata, flags, rc):
+    if rc == 0:
+        print("Connected.")
+        client.subscribe(MQTT_TOPIC_CLASSIFY)
+    else:
+        print("Failed to connect. Error code: %d" % (rc))
+
+def on_message(client, userdata, msg):
+    print("Received message from server.")
+    resp_dict = json.loads(msg.payload)
+    print(
+        resp_dict
+    )
+
+def setup(hostname):
+    client = mqtt.Client()
+    client.on_connect = on_connect
+    client.on_message = on_message
+    client.connect(hostname)
+    client.loop_start()
+    return client
+
+# Inteface with gateway ble functions
+def get_data_func():
+    filenames = [BLE_NAME_SENSOR_NECK+".json", BLE_NAME_SENSOR_SHOULDER_L+".json", BLE_NAME_SENSOR_SHOULDER_R+".json", BLE_NAME_SENSOR_BACK+".json"]
+    exists = [os.path.exists(filename) for filename in filenames]
+    # If all files exist
+    if all(exist for exist in exists):
+        # Merge the json files
+        send_dict = {}
+        for filename in filenames:
+            with open(filename, "r") as f:
+                dict_data = json.load(f)
+                send_dict.update(dict_data)
+        return send_dict
+    else:
+        return
+
+async def mqtt_watcher(mqtt_client, mqtt_flags):
+    while True:
+        for f in mqtt_flags:
+            await f.wait()
+        for f in mqtt_flags:
+            f.clear()
+        mqtt_send_data(mqtt_client, mqtt_flags)
+
+def mqtt_send_data(mqtt_client, mqtt_flags):
+    send_dict = get_data_func()
+
+    mqtt_client.publish(MQTT_TOPIC_PREDICT, json.dumps(send_dict))
+    print("Published")
 
 if __name__ == "__main__":
     """
@@ -368,9 +449,11 @@ if __name__ == "__main__":
 
     loop = asyncio.get_event_loop()
 
+    mqtt_client = setup("127.0.0.1")
+
     # Runs the loop forever since main() has a while True loop
     try:
-        loop.run_until_complete(main())
+        loop.run_until_complete(main(mqtt_client))
     # Something unexpected happened, whole program will close
     except Exception as e:
         print(e)
