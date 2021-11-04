@@ -80,6 +80,7 @@ def setup(hostname):
 
 def main():
     load_model()
+    # setup("13.59.198.52")
     setup("127.0.0.1")
     while True:
         pass
