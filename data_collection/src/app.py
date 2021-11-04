@@ -15,6 +15,7 @@ import bleak
 import os
 import signal
 import sys
+import json
 
 TIME_BETWEEN_READINGS = 5 # seconds
 
@@ -39,7 +40,8 @@ from utils.utils import (
     getDataframeFromDatalist, 
     loadDataframeFromCsv, 
     saveDataframeToCsv,
-    getTimeStamp
+    getTimeStamp,
+    getRowFromDatalists
 )
 
 class Service:
@@ -280,11 +282,35 @@ async def run(address, postfix, flag, flags):
                 # Print all the data collected for all the devices
                 print("--------------------")
                 print("All flags: " + str(all(f.is_set() for f in flags)))
-                print(postfix + ":acc " + str(acc_sensor.readings))
-                print(postfix + ":gyro " + str(gyro_sensor.readings))
-                print(postfix + ":mag " + str(magneto_sensor.readings))
-                print("--------------------")
+                acc_readings = acc_sensor.readings
+                gyro_readings = gyro_sensor.readings
+                magneto_readings = magneto_sensor.readings
+                print(postfix + ":acc " + str(acc_readings))
+                print(postfix + ":gyro " + str(gyro_readings))
+                print(postfix + ":mag " + str(magneto_readings))
 
+                # Get all readings
+                timestamp = acc_readings[0]
+                acc = list(acc_readings[1])
+                gyro = list(gyro_readings[1])
+                magneto = list(magneto_readings[1])
+
+                # Create a dictionary of readings
+                l = ["accX_", "accY_", "accZ_", "magX_", "magY_", "magZ_", "gyroX_", "gyroY_", "gyroZ_"]
+                sensor_keys = [i + postfix for i in l]
+                sensor_val = []
+                sensor_val.extend(acc)
+                sensor_val.extend(magneto)
+                sensor_val.extend(gyro)
+                zip_iter = zip(sensor_keys, sensor_val)
+                datalist = dict(zip_iter)
+                datalist["Timestamp"] = timestamp
+
+                # Write to json file
+                json_object = json.dumps(datalist)
+                filename = postfix + ".json"
+                with open(filename, "w") as outfile:
+                    outfile.write(json_object)
             except Exception as e:
                 raise e
 

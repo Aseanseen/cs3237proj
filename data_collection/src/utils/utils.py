@@ -5,7 +5,8 @@ import os
 def getTimeStamp():
     return datetime.timestamp(datetime.now())
 
-def getRowFromDatalists(datalists, classification):
+# def getRowFromDatalists(datalists, classification):
+def getRowFromDatalists(datalists):
     rows = []
     tmp = []
     for id in range(len(datalists[0]["acc"])):
@@ -17,23 +18,20 @@ def getRowFromDatalists(datalists, classification):
                 *datalist["gyro"][id][1], 
                 *datalist["mag"][id][1] 
             ]
-        tmp += [classification]
-        rows.append(tmp)
+        # tmp += [classification]
+        # rows.append(tmp)
     return rows
 
-def getDataframeFromDatalist(datalists, postfixes, classification):
-    print("anywhere1 ", datalists[0])
-    print("anywhere2 ", datalists[1])
-
+def getDataframeFromDatalist(datalists, postfixes):
     dev_data = ["accX", "accY", "accZ", "magX", "magY", "magZ", "gyroX", "gyroY", "gyroZ"]
     column = ["Timestamp"] 
     for postfix in postfixes:
         column += [col + "_%s" % (postfix) for col in dev_data]
-    column += ["Classification"]
+    # column += ["Classification"]
     # print(column)
 
-    rows = getRowFromDatalists(datalists, classification)
-    
+    # rows = getRowFromDatalists(datalists, classification)
+    rows = getRowFromDatalists(datalists)
     df = pd.DataFrame(rows, columns = column)
     return df
 
