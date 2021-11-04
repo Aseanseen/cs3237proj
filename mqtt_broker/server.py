@@ -60,11 +60,12 @@ def on_message(client, userdata, msg):
         "acc_z_shoulder_r": recv_dict["accZ_shoulder_r"], 
     }            
 
-    """
-    MQTT
-    """                                                          
+    """       
+    MQTT      
+    """                                                             
     print(acc_dict)                                  
-    send_dict = classify(acc_list_str=acc_dict)              
+    send_dict = classify(acc_list_str=acc_dict)         
+    print(send_dict)     
     client.publish(MQTT_TOPIC_CLASSIFY, json.dumps(send_dict))
                                                                
     #Send the request and get back the response into result
