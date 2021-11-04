@@ -5,7 +5,6 @@ import requests
 # import tensorflow as tf
 # from tensorflow.python.keras.backend import set_session
 # from tensorflow.keras.models import load_model
-from PIL import Image 
 from os import listdir
 from os.path import join
 from model import (
