@@ -15,7 +15,16 @@ def classify(acc_list_str):
     input_array = [
         acc_list_str["acc_x_neck"],
         acc_list_str["acc_y_neck"],
-        acc_list_str["acc_z_neck"]
+        acc_list_str["acc_z_neck"],
+        acc_list_str["acc_x_back"],
+        acc_list_str["acc_y_back"],
+        acc_list_str["acc_z_back"],  
+        acc_list_str["acc_x_shoulder_l"],
+        acc_list_str["acc_y_shoulder_l"],
+        acc_list_str["acc_z_shoulder_l"],
+        acc_list_str["acc_x_shoulder_r"],
+        acc_list_str["acc_y_shoulder_r"],
+        acc_list_str["acc_z_shoulder_r"],
     ]
     
     model_input = np.array(input_array).reshape(1, -1)
@@ -34,5 +43,5 @@ def load_model():
     global model 
     filename = 'rfc_model.sav'
     model = joblib.load(filename)
-    
+                                 
 

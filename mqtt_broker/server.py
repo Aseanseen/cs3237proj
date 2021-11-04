@@ -48,16 +48,16 @@ def on_message(client, userdata, msg):
         "timecollect": round(recv_dict["Timestamp"]),
         "acc_x_neck": recv_dict["accX_neck"],
         "acc_y_neck": recv_dict["accY_neck"],
-        "acc_z_neck": recv_dict["accZ_neck"],
-    }
+        "acc_z_neck": recv_dict["accZ_neck"], 
+    }            
 
     """
     MQTT
-    """
-    print(acc_dict)
-    send_dict = classify(acc_list_str=acc_dict)
+    """                                                          
+    print(acc_dict)                                  
+    send_dict = classify(acc_list_str=acc_dict)              
     client.publish(MQTT_TOPIC_CLASSIFY, json.dumps(send_dict))
-
+                                                               
     #Send the request and get back the response into result
     """
     HTTP
