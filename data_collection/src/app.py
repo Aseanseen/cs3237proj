@@ -449,7 +449,10 @@ if __name__ == "__main__":
 
     loop = asyncio.get_event_loop()
 
-    mqtt_client = setup("127.0.0.1")
+    # mqtt_client = setup("127.0.0.1")
+    
+    # To interface with AWS MQTT
+    mqtt_client = setup("13.59.198.52")
 
     # Runs the loop forever since main() has a while True loop
     try:
