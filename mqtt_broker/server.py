@@ -49,6 +49,15 @@ def on_message(client, userdata, msg):
         "acc_x_neck": recv_dict["accX_neck"],
         "acc_y_neck": recv_dict["accY_neck"],
         "acc_z_neck": recv_dict["accZ_neck"], 
+        "acc_x_back": recv_dict["accX_back"],
+        "acc_y_back": recv_dict["accY_back"],
+        "acc_z_back": recv_dict["accZ_back"], 
+        "acc_x_shoulder_l": recv_dict["accX_shoulder_l"],
+        "acc_y_shoulder_l": recv_dict["accY_shoulder_l"],
+        "acc_z_shoulder_l": recv_dict["accZ_shoulder_l"], 
+        "acc_x_shoulder_r": recv_dict["accX_shoulder_r"],
+        "acc_y_shoulder_r": recv_dict["accY_shoulder_r"],
+        "acc_z_shoulder_r": recv_dict["accZ_shoulder_r"], 
     }            
 
     """
