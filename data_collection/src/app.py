@@ -24,11 +24,15 @@ from os.path import join
 from time import (
     sleep
 )
+import pandas as pd
+import csv
 
 TIME_BETWEEN_READINGS = 5 # seconds
 PATH = "./samples"
 MQTT_TOPIC_CLASSIFY = "Group_B2/IMAGE/classify"
 MQTT_TOPIC_PREDICT = "Group_B2/IMAGE/predict"
+
+data_with_labels = "data_with_labels.csv"
 
 from bleak import (
     BleakClient,
@@ -329,7 +333,7 @@ async def run(address, postfix, flag, flags, mqtt_flag):
                 raise e
 
 # https://stackoverflow.com/questions/59073556/how-to-cancel-all-remaining-tasks-in-gather-if-one-fails
-async def main(mqtt_client):
+async def main(mqtt_client, category):
     while True:
         # This finds the bluetooth devices and will not exit untill all devices are visible. However, this does not connect to the devices.
         while not await discover_sensors():
@@ -367,7 +371,7 @@ async def main(mqtt_client):
 
             # Create a list of tasks using list comprehension
             tasks = [asyncio.ensure_future(run(address, BLE_ADDR_TO_NAME[address], switcher.get(BLE_ADDR_TO_NAME[address]), flags, mqtt_switcher.get(BLE_ADDR_TO_NAME[address]))) for address in BLE_ADDR_LIST]
-            tasks.append(asyncio.ensure_future(mqtt_watcher(mqtt_client, mqtt_flags)))
+            tasks.append(asyncio.ensure_future(mqtt_watcher(mqtt_client, mqtt_flags, category)))
             # Wait for all tasks
             await asyncio.gather(*tasks)
 
@@ -420,19 +424,42 @@ def get_data_func():
     else:
         return
 
-async def mqtt_watcher(mqtt_client, mqtt_flags):
+async def mqtt_watcher(mqtt_client, mqtt_flags, category):
     while True:
         for f in mqtt_flags:
             await f.wait()
         for f in mqtt_flags:
             f.clear()
-        mqtt_send_data(mqtt_client, mqtt_flags)
+        mqtt_send_data(mqtt_client, mqtt_flags, category)
 
-def mqtt_send_data(mqtt_client, mqtt_flags):
+def mqtt_send_data(mqtt_client, mqtt_flags, category):
     send_dict = get_data_func()
-
     mqtt_client.publish(MQTT_TOPIC_PREDICT, json.dumps(send_dict))
     print("Published")
+
+    """
+    This is for saving all the classification data to csv
+    """
+    # Convert from dict to df to csv row
+    for key in send_dict.keys():
+        val = send_dict.get(key)
+        val_list = [val]
+        send_dict.update({key: val_list})
+    df = pd.DataFrame.from_dict(send_dict)
+    df["category"] = category
+    # myCsvRow = df.values.flatten().tolist()
+    myCsvRow = df.to_numpy().flatten().tolist()
+
+    # If the file already exists, append the row, if not create a new file and save
+    if(os.path.exists(data_with_labels)):
+        save_df = pd.read_csv(data_with_labels)
+        with open(data_with_labels,'a') as fd:
+            wr = csv.writer(fd, delimiter=',')
+            print(myCsvRow)
+            wr.writerow(myCsvRow)
+    else:
+        save_df = df
+        save_df.to_csv(data_with_labels, index=False)
 
 if __name__ == "__main__":
     """
@@ -447,6 +474,9 @@ if __name__ == "__main__":
     )
     os.environ["PYTHONASYNCIODEBUG"] = str(1)
 
+    print("Collecting ground truth labels for category %s" % (sys.argv[0]))
+    category = sys.argv[1]
+
     loop = asyncio.get_event_loop()
 
     # mqtt_client = setup("127.0.0.1")
@@ -456,7 +486,7 @@ if __name__ == "__main__":
 
     # Runs the loop forever since main() has a while True loop
     try:
-        loop.run_until_complete(main(mqtt_client))
+        loop.run_until_complete(main(mqtt_client, category))
     # Something unexpected happened, whole program will close
     except Exception as e:
         print(e)
