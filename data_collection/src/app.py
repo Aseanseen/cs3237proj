@@ -255,6 +255,8 @@ async def run(address, postfix, flag, flags, mqtt_flag):
             client.set_disconnected_callback(on_disconnect)
             print(postfix + " bleak is connected!")
 
+            led_and_buzzer = LEDAndBuzzer()
+
             acc_sensor = AccelerometerSensorMovementSensorMPU9250()
             gyro_sensor = GyroscopeSensorMovementSensorMPU9250()
             magneto_sensor = MagnetometerSensorMovementSensorMPU9250()
@@ -392,10 +394,13 @@ def on_connect(client, userdata, flags, rc):
 def on_message(client, userdata, msg):
     print("Received message from server.")
     resp_dict = json.loads(msg.payload)
+    # for classfication in MQTT_CLASSIFICATIONS:
+    #     if (resp_dict.get(classfication) != MQTT_CLASSIFICATION_PROPER):
+    #         await led_and_buzzer.notify(client, 0x05)        
     print(
         resp_dict
     )
-
+    
 def setup(hostname):
     client = mqtt.Client()
     client.on_connect = on_connect
