@@ -30,7 +30,7 @@ def on_message(client, userdata: asyncio.Event, msg):
         userdata.set()     
     else:
         userdata.clear()
-        
+
     print(
         resp_dict
     )

@@ -42,7 +42,7 @@ from time import (
     sleep
 )
 
-TIME_BETWEEN_READINGS = 5 # seconds
+TIME_BETWEEN_READINGS = 0.5 # seconds
 PATH = "./samples"
 
 led_and_buzzer = None
@@ -288,7 +288,13 @@ async def run(address, postfix, flag, flags, mqtt_flag, warn_flag):
         # Once connected the client should not disconnect
         # If it does, exception is raised
         while True:
-            await asyncio.sleep(TIME_BETWEEN_READINGS) # Without await, the bleak listener cannot update the readings array, giving errors
+            for i in range(10):
+                if warn_flag.is_set():
+                    print("haha")
+                    await led_and_buzzer.notify(client, 0x05)
+                else:
+                    await led_and_buzzer.notify(client, 0x02)
+                await asyncio.sleep(TIME_BETWEEN_READINGS) # Without await, the bleak listener cannot update the readings array, giving errors
             try:
                 # Check if client is connected, if not raise Exception
                 if not client.is_connected:
@@ -343,12 +349,7 @@ async def run(address, postfix, flag, flags, mqtt_flag, warn_flag):
                 if not mqtt_flag.is_set():
                     mqtt_flag.set()
 
-                if warn_flag.is_set() and address == BLE_ADDR_SENSOR_BACK:
-                    print("haha")
-                    warn_flag.clear()
-                    await led_and_buzzer.notify(client, 0x05)
-                else:
-                    await led_and_buzzer.notify(client, 0x00)
+
 
             except Exception as e:
                 raise e

@@ -10,7 +10,7 @@ from commons.commons import (
 def get_plot(posture, dates):
     posture
     # Choose some nice levels
-    levels = np.tile([-5, 5, -3, 3, -1, 1],
+    levels = np.tile([-3, 3, -2, 2, -1, 1],
                     int(np.ceil(len(posture)/6)))[:len(posture)]
 
     # Create figure and plot a stem plot with the date
@@ -29,7 +29,7 @@ def get_plot(posture, dates):
                     verticalalignment="bottom" if l > 0 else "top")
 
     # format xaxis with 4 month intervals
-    ax.xaxis.set_major_locator(mdates.SecondLocator(interval=4))
+    ax.xaxis.set_major_locator(mdates.MinuteLocator(interval=4))
     ax.xaxis.set_major_formatter(mdates.DateFormatter("%b-%d-%Y %H:%M:%S"))
     plt.setp(ax.get_xticklabels(), rotation=30, ha="right")
 
@@ -47,6 +47,6 @@ def get_advice(posture, dates):
     for classification in posture:
         count[classification] = 1 if classification not in count.keys() else count[classification] + 1
     
-    for classification in MQTT_CLASSIFICATIONS:
+    for classification in CLASSIFICATIONS:
         advice += "\n[%s] : You were in this posture %.3f percent of the time!\n" % (classification, (count[classification]/len(posture)))
     return advice

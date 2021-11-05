@@ -78,7 +78,7 @@ def get_data():
 		
 		list_of_timestamps = [datetime.datetime.fromtimestamp(user.timecollect) for user in entries_to_analyse]
 		list_of_timestamps_str = [timestamp.strftime("%m/%d/%Y, %H:%M:%S") for timestamp in list_of_timestamps]
-		list_of_classifications = [CLASSIFICATION_ENUM_TO_NAME[user.classification] for user in entries_to_analyse]
+		list_of_classifications = [user.classification for user in entries_to_analyse]
 		print(list_of_timestamps_str)
 		print(list_of_classifications)
 

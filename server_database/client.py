@@ -38,8 +38,8 @@ def main():
 
     dict_to_enter = {
         "name" : "Sally",
-        "start_time" : 1636123646,
-        "end_time" : 1636123676
+        "start_time" : 1636145419,
+        "end_time" : 1636146879
     }
     requests.get(url_get_data, params=dict_to_enter)
     #Send the request and get back the response into result
