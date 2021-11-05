@@ -36,8 +36,8 @@ def string_to_float_list(string_of_list):
 
 @app.route('/classify', methods = ['GET'])
 def classify():
-    label_dict = {0: 'Good posture', 1: 'F1', 2: 'F2', 
-                  3: 'F3', 4: 'F4'}
+    label_dict = {0: 'Good posture', 1: 'Lean Forward', 2: 'Lean Backward', 
+                  3: 'Lean Left', 4: 'Lean Right'}
     
     # Extract GET parameters from request object
     acc_list_str = request.args.get('acc_list')

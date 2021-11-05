@@ -331,9 +331,6 @@ async def controller(queue):
 
         await asyncio.sleep(1)
 
-
-
-
 async def main(queue):
     while not await discover_sensors():
         print("waiting")
