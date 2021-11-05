@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+		<title> MyApp </title>
+</head>
+
+<body>
+	
+	<!-- Its the form where a user can submit his or her name and email -->
+
+	<!-- <form class="form-inline" action="" method="POST">
+		<label>Timestamp</label>
+	  	<input type="number" id="timecollect" placeholder="Enter Time stamp" name="timecollect">
+		<label>Acc_x_neck</label>
+	  	<input type="number" id="acc_x_neck" placeholder="Enter acc_x at neck" name="acc_x_neck">
+	  	<label>Acc_y_neck</label>
+	  	<input type="number" id="acc_y_neck" placeholder="Enter acc_y at neck" name="acc_y_neck">
+		<label>Acc_z_neck</label>
+	  	<input type="number" id="acc_z_neck" placeholder="Enter acc_z at neck" name="acc_z_neck">
+	  	<button type="submit">Submit</button>
+	</form> -->
+
+
+	<!-- The table where all the data from the DB will be appeared -->
+
+	<table class="data" border="1" style="width: 100%; margin-top: 20px; text-align: center;">
+		<tr>
+			<th colspan="2">User Data</th>
+	  	</tr>
+	  	<tr>
+	  		<td>Timestamp</td>
+			<td>classification</td>
+	  	</tr>
+
+	  	<!-- The user_data is a variable containing all the user data from the DB. -->
+	  	
+	  	{% for user in user_data %}
+	  	<tr>
+	  		<td>{{user.timecollect}}</td>
+			<td>{{user.classification}}</td> 
+	  	</tr>
+	  	{% endfor %}
+
+	</table>
+</body>
