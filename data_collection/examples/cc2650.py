@@ -11,23 +11,9 @@ Adapted by Ashwin from the following sources:
 import asyncio
 import platform
 import struct
-import bleak
 
-from bleak import (
-    BleakClient,
-    discover
-)
-from utils import (
-    appendDataToDataframe,
-    getDataframeFromDatalist, 
-    loadDataframeFromCsv, 
-    saveDataframeToCsv,
-    getTimeStamp
-)
+from bleak import BleakClient
 
-list_of_acc = []
-list_of_mag = []
-list_of_gyro = []
 
 class Service:
     """
@@ -115,10 +101,7 @@ class AccelerometerSensorMovementSensorMPU9250(MovementSensorMPU9250SubService):
     def cb_sensor(self, data):
         '''Returns (x_accel, y_accel, z_accel) in units of g'''
         rawVals = data[3:6]
-        # print("[MovementSensor] Accelerometer:", tuple([ v*self.scale for v in rawVals ]))
-        list_of_acc.append(
-            [getTimeStamp(), tuple([ v*self.scale for v in rawVals ])]
-        )
+        print("[MovementSensor] Accelerometer:", tuple([ v*self.scale for v in rawVals ]))
 
 
 class MagnetometerSensorMovementSensorMPU9250(MovementSensorMPU9250SubService):
@@ -131,10 +114,7 @@ class MagnetometerSensorMovementSensorMPU9250(MovementSensorMPU9250SubService):
     def cb_sensor(self, data):
         '''Returns (x_mag, y_mag, z_mag) in units of uT'''
         rawVals = data[6:9]
-        # print("[MovementSensor] Magnetometer:", tuple([ v*self.scale for v in rawVals ]))
-        list_of_mag.append(
-            [getTimeStamp(), tuple([ v*self.scale for v in rawVals ])]
-        )
+        print("[MovementSensor] Magnetometer:", tuple([ v*self.scale for v in rawVals ]))
 
 
 class GyroscopeSensorMovementSensorMPU9250(MovementSensorMPU9250SubService):
@@ -146,10 +126,7 @@ class GyroscopeSensorMovementSensorMPU9250(MovementSensorMPU9250SubService):
     def cb_sensor(self, data):
         '''Returns (x_gyro, y_gyro, z_gyro) in units of degrees/sec'''
         rawVals = data[0:3]
-        # print("[MovementSensor] Gyroscope:", tuple([ v*self.scale for v in rawVals ]))
-        list_of_gyro.append(
-            [getTimeStamp(), tuple([ v*self.scale for v in rawVals ])]
-        )
+        print("[MovementSensor] Gyroscope:", tuple([ v*self.scale for v in rawVals ]))
 
 
 class OpticalSensor(Sensor):
@@ -163,7 +140,6 @@ class OpticalSensor(Sensor):
         m = raw & 0xFFF
         e = (raw & 0xF000) >> 12
         print("[OpticalSensor] Reading from light sensor:", 0.01 * (m << e))
-
 
 
 class HumiditySensor(Sensor):
@@ -223,16 +199,20 @@ class LEDAndBuzzer(Service):
 
 
 async def run(address):
-    lock = asyncio.Lock()
-    async with BleakClient(address, timeout = 10.0) as client:
-        try:
-            x = await client.is_connected()
-            print("Connected: {0}".format(x))
-        except bleak.exc.BleakError:
-            
+    async with BleakClient(address) as client:
+        x = await client.is_connected()
+        print("Connected: {0}".format(x))
 
+        led_and_buzzer = LEDAndBuzzer()
 
+        light_sensor = OpticalSensor()
+        await light_sensor.start_listener(client)
 
+        humidity_sensor = HumiditySensor()
+        await humidity_sensor.start_listener(client)
+
+        barometer_sensor = BarometerSensor()
+        await barometer_sensor.start_listener(client)
 
         acc_sensor = AccelerometerSensorMovementSensorMPU9250()
         gyro_sensor = GyroscopeSensorMovementSensorMPU9250()
@@ -242,82 +222,28 @@ async def run(address):
         movement_sensor.register(acc_sensor)
         movement_sensor.register(gyro_sensor)
         movement_sensor.register(magneto_sensor)
-        await movement_sensor.start_listener(client)    
+        await movement_sensor.start_listener(client)
 
         cntr = 0
-
-        df = None
-
-        numDevice = 1
-
-        if os.path.exists("out.csv"):
-            df = loadDataframeFromCsv("out.csv")
-            print(df)
 
         while True:
             # we don't want to exit the "with" block initiating the client object as the connection is disconnected
             # unless the object is stored
             await asyncio.sleep(1.0)
 
-            # if cntr == 0:
-            #     # shine the red light
-            #     await led_and_buzzer.notify(client, 0x01)
+            if cntr == 0:
+                # shine the red light
+                await led_and_buzzer.notify(client, 0x01)
 
-            # if cntr == 5:
-            #     # shine the green light
-            #     await led_and_buzzer.notify(client, 0x02)
+            if cntr == 5:
+                # shine the green light
+                await led_and_buzzer.notify(client, 0x02)
 
             cntr += 1
 
             if cntr == 10:
-                print(
-                    list_of_acc,
-                    "\n\n",
-                    list_of_gyro,
-                    "\n\n",
-                    list_of_mag,
-                    "\n\n",
-                )
-                datalist = \
-                    {
-                        "acc" : list_of_acc,
-                        "gyro" : list_of_gyro,
-                        "mag" : list_of_mag
-                    }
-                async with lock:
-                    if df is None:
-                        df = getDataframeFromDatalist(datalist, address[-6:])
-                        saveDataframeToCsv(df, "out.csv")
-
-                    else:
-                        df = appendDataToDataframe(df, datalist, address[-6:])
-                        saveDataframeToCsv(df, "out.csv")
-
                 cntr = 0
 
-
-# if __name__ == "__main__":
-#     """
-#     To find the address, once your sensor tag is blinking the green led after pressing the button, run the discover.py
-#     file which was provided as an example from bleak to identify the sensor tag device
-#     """
-
-#     import os
-
-#     os.environ["PYTHONASYNCIODEBUG"] = str(1)
-#     address = (
-#         # "54:6c:0e:b5:56:00"
-#         "54:6C:0E:53:3A:A1"
-#         if platform.system() != "Darwin"
-#         else "6FFBA6AE-0802-4D92-B1CD-041BE4B4FEB9"
-#     )
-#     loop = asyncio.get_event_loop()
-#     loop.run_until_complete(run(address))
-#     loop.run_forever()
-
-def main(addresses):
-    
-    return asyncio.gather(*(run(address) for address in addresses))
 
 if __name__ == "__main__":
     """
@@ -325,15 +251,14 @@ if __name__ == "__main__":
     file which was provided as an example from bleak to identify the sensor tag device
     """
 
-    # KW: https://github.com/hbldh/bleak/issues/345
     import os
 
     os.environ["PYTHONASYNCIODEBUG"] = str(1)
-    addresses = [
-        "54:6C:0E:53:3A:A1",
-        # Apparently you add more addresses here.
-        # "54:6C:0E:B6:DC:03",
-    ]
+    address = (
+        "54:6C:0E:53:34:DF"
+        if platform.system() != "Darwin"
+        else "6FFBA6AE-0802-4D92-B1CD-041BE4B4FEB9"
+    )
     loop = asyncio.get_event_loop()
-    loop.run_until_complete(main(addresses))
+    loop.run_until_complete(run(address))
     loop.run_forever()
