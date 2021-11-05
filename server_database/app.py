@@ -1,5 +1,6 @@
 from flask import Flask , render_template, jsonify, request, redirect, url_for, jsonify
 from flask_sqlalchemy import SQLAlchemy
+from commons.commons import CLASSIFICATION_ENUM_TO_NAME
 
 app = Flask(__name__)
 
@@ -60,7 +61,20 @@ def add_data():
 def get_data():
 	if request.method == 'GET': # When a user clicks submit button it will come here.
 		start_time = int(request.args.get("start_time"))
-		end_time = float(request.args.get("end_time"))
+		end_time = int(request.args.get("end_time"))
+		name = request.args.get("name")
+		entries_to_analyse = User.query.\
+			filter(User.name == name).\
+			filter(User.timecollect >= start_time).\
+			filter(User.timecollect <= end_time).\
+			all()
+		
+		list_of_timestamps = [user.timecollect for user in entries_to_analyse]
+		list_of_classifications = [CLASSIFICATION_ENUM_TO_NAME[user.classification] for user in entries_to_analyse]
+		print(list_of_timestamps)
+		print(list_of_classifications)
+
+		print(entries_to_analyse)
 		
 		#TODO: Comput the result based on start_time and end_times
 		#user_data = User.query.all()
