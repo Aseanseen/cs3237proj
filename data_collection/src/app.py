@@ -17,17 +17,13 @@ import signal
 import sys
 import json
 from commons.commons import (
-    BLE_ADDR_SENSOR_BACK,
-    MQTT_CLASSIFICATION_BACKWARD, 
-    MQTT_CLASSIFICATION_PROPER,
+    BLE_NAME_LIST,
     BLE_ADDR_LIST,
     BLE_ADDR_TO_NAME,
     BLE_NAME_SENSOR_NECK,
-    BLE_NAME_SENSOR_SHOULDER_L,
-    BLE_NAME_SENSOR_SHOULDER_R,
-    BLE_NAME_SENSOR_BACK,
-    MQTT_TOPIC_CLASSIFY,
-    MQTT_TOPIC_PREDICT
+    BLE_NAME_SENSOR_BACK_MID,
+    BLE_NAME_SENSOR_BACK_LOW,
+    MQTT_CLASSIFICATIONS
 )
 
 from mqtt.controller import (
@@ -362,47 +358,43 @@ async def run(address, postfix, flag, flags, mqtt_flag, warn_flag):
 
 async def main(mqtt_client, category):
     while True:
-        # This finds the bluetooth devices and will not exit untill all devices are visible. However, this does not connect to the devices.
-        while not await discover_sensors():
-            print("waiting for sensors")
-
         try:
+            # This finds the bluetooth devices and will not exit untill all devices are visible. However, this does not connect to the devices.
+            while not await discover_sensors():
+                print("waiting for sensors")
+
+        
             # Create flags for each sensor to signal whene each bleak client is connected for each sensor
             neck_Flag = asyncio.Event()
-            back_Flag = asyncio.Event()
-            shoulder_r_Flag = asyncio.Event()
-            shoulder_l_Flag = asyncio.Event()
+            back_low_Flag = asyncio.Event()
+            back_mid_Flag = asyncio.Event()
             # flags = [neck_Flag, back_Flag, shoulder_r_Flag, shoulder_l_Flag]
 
             # switcher is a switch case statement but in python
             switcher = {
                 BLE_NAME_SENSOR_NECK: neck_Flag,
-                BLE_NAME_SENSOR_BACK: back_Flag,
-                BLE_NAME_SENSOR_SHOULDER_L: shoulder_l_Flag,
-                BLE_NAME_SENSOR_SHOULDER_R: shoulder_r_Flag
+                BLE_NAME_SENSOR_BACK_MID: back_mid_Flag,
+                BLE_NAME_SENSOR_BACK_LOW: back_low_Flag
             }
 
             switcher = {
                 BLE_NAME_SENSOR_NECK: neck_Flag,
-                BLE_NAME_SENSOR_BACK: back_Flag,
-                BLE_NAME_SENSOR_SHOULDER_L: shoulder_l_Flag,
-                BLE_NAME_SENSOR_SHOULDER_R: shoulder_r_Flag
+                BLE_NAME_SENSOR_BACK_MID: back_mid_Flag,
+                BLE_NAME_SENSOR_BACK_LOW: back_low_Flag
             }
 
             flags = [switcher[BLE_ADDR_TO_NAME[address]]for address in BLE_ADDR_LIST]
             
             # Create flags for each sensor to signal whene each bleak client is connected for each sensor
             mqtt_neck_Flag = asyncio.Event()
-            mqtt_back_Flag = asyncio.Event()
-            mqtt_shoulder_r_Flag = asyncio.Event()
-            mqtt_shoulder_l_Flag = asyncio.Event()
+            mqtt_back_low_Flag = asyncio.Event()
+            mqtt_back_mid_Flag = asyncio.Event()
 
             # mqtt_switcher is a switch case statement but in python
             mqtt_switcher = {
                 BLE_NAME_SENSOR_NECK: mqtt_neck_Flag,
-                BLE_NAME_SENSOR_BACK: mqtt_back_Flag,
-                BLE_NAME_SENSOR_SHOULDER_L: mqtt_shoulder_l_Flag,
-                BLE_NAME_SENSOR_SHOULDER_R: mqtt_shoulder_r_Flag
+                BLE_NAME_SENSOR_BACK_MID: mqtt_back_mid_Flag,
+                BLE_NAME_SENSOR_BACK_LOW: mqtt_back_low_Flag
             }
 
             mqtt_flags = [mqtt_switcher[BLE_ADDR_TO_NAME[address]]for address in BLE_ADDR_LIST]
@@ -423,7 +415,7 @@ async def main(mqtt_client, category):
                     )
                 ) for address in BLE_ADDR_LIST]
 
-            tasks.append(asyncio.ensure_future(mqtt_watcher(mqtt_client, mqtt_flags)))
+            tasks.append(asyncio.ensure_future(mqtt_watcher(mqtt_client, mqtt_flags, category)))
             # Wait for all tasks
             await asyncio.gather(*tasks)
 
@@ -441,7 +433,8 @@ async def main(mqtt_client, category):
 
 # Inteface with gateway ble functions
 def get_data_func():
-    filenames = [BLE_NAME_SENSOR_NECK+".json", BLE_NAME_SENSOR_SHOULDER_L+".json", BLE_NAME_SENSOR_SHOULDER_R+".json", BLE_NAME_SENSOR_BACK+".json"]
+    filenames = [i+".json" for i in BLE_NAME_LIST]
+        
     exists = [os.path.exists(filename) for filename in filenames]
     # If all files exist
     if all(exist for exist in exists):
@@ -465,7 +458,8 @@ async def mqtt_watcher(mqtt_client, mqtt_flags, category):
 
 def mqtt_send_data(mqtt_client, mqtt_flags, category):
     send_dict = get_data_func()
-    mqtt_client.publish(MQTT_TOPIC_PREDICT, json.dumps(send_dict))
+    print(send_dict)
+    # mqtt_client.publish(MQTT_TOPIC_PREDICT, json.dumps(send_dict))
     print("Published")
 
     """
@@ -492,21 +486,37 @@ def mqtt_send_data(mqtt_client, mqtt_flags, category):
         save_df = df
         save_df.to_csv(data_with_labels, index=False)
 
+# async def handleException():
+#     while not ble_queue.empty():
+#         client = await ble_queue.get()
+#         await client.disconnect()
+
+async def handleException_(loop):
+    print("lol")
+    # loop = asyncio.get_event_loop()
+    # loop.run_until_complete(handleException())
+    # loop.close()
+
+
+
 if __name__ == "__main__":
     """
     To find the address, once your sensor tag is blinking the green led after pressing the button, run the discover.py
     file which was provided as an example from bleak to identify the sensor tag device
     """
-
+    category = None
     # KW: https://github.com/hbldh/bleak/issues/345 
     
     print(
         "Starting the program"
     )
     os.environ["PYTHONASYNCIODEBUG"] = str(1)
+
+    if len(sys.argv) > 1:
+        print("Collecting data for csv training!")
+        print("Collecting ground truth labels for category %s" % (MQTT_CLASSIFICATIONS[int(sys.argv[1])]))
+        category = sys.argv[1]
     
-    print("Collecting ground truth labels for category %s" % (sys.argv[0]))
-    category = sys.argv[0]
 
     loop = asyncio.get_event_loop()
 
@@ -517,9 +527,12 @@ if __name__ == "__main__":
 
     # Runs the loop forever since main() has a while True loop
     try:
+        loop.set_exception_handler(handleException_)
         loop.run_until_complete(main(mqtt_client, category))
+        
     # Something unexpected happened, whole program will close
     except Exception as e:
+        print("hi")
         print(e)
         loop.close()
 

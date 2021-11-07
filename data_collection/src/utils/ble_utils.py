@@ -1,9 +1,5 @@
 import asyncio
 from commons.commons import (
-    BLE_ADDR_SENSOR_SHOULDER_L,
-    BLE_ADDR_SENSOR_SHOULDER_R,
-    BLE_ADDR_SENSOR_NECK,
-    BLE_ADDR_SENSOR_BACK,
     BLE_ADDR_LIST,
     BLE_ADDR_TO_NAME
 )
