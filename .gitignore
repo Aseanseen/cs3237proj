@@ -1,2 +1,3 @@
 ml_model/.ipynb_checkpoints/train-checkpoint.ipynb
 *.pem
+__pycache__
