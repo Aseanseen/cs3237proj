@@ -9,7 +9,8 @@
 
 
 ## Note for Sensortag
-- This code builds on the ```sensortag``` CCS project in the BLUstack, and you need to replace the right files in the project to write the code to your device. You need to install Blustack, follow the BLE guide uploaded, and replace the files with that in ```sensor_profile/``` and ```sensortag_cs3237```. You should use drag and drop into project window, then create a virtual link when prompted. These files are changed from the BLE stack:
+- This code builds on the ```sensortag``` CCS project in the BLUstack, and you need to replace the right files in the project to write the code to your device. You can try to load the ccs project: ```sensortag/cs3237_ccs_proj.zip```. Otherwise, you need to install Blustack, follow the BLE guide uploaded, and replace the files with that in ```sensor_profile/``` and ```sensortag_cs3237```. 
+- You should use drag and drop to transfer the following files into CCS project window, then create a virtual link when prompted. These files are changed from the BLE stack:
   - (Added)    ```Applications/sensortag_quat.c```, ```sensortag_quat.h```
   - (Modified) ```Applications/sensortag.c```, ```sensortag.h```
   - (Added) ```Applications/quat_utils.c```, ```quat_utils.h```
