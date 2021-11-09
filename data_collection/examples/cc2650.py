@@ -158,8 +158,8 @@ class HumiditySensor(Sensor):
 class BarometerSensor(Sensor):
     def __init__(self):
         super().__init__()
-        self.data_uuid = "f000aa41-0451-4000-b000-000000000000"
-        self.ctrl_uuid = "f000aa42-0451-4000-b000-000000000000"
+        self.data_uuid = "f000aa61-0451-4000-b000-000000000000"
+        self.ctrl_uuid = "f000aa62-0451-4000-b000-000000000000"
 
     def callback(self, sender: int, data: bytearray):
         (tL, tM, tH, pL, pM, pH) = struct.unpack('<BBBBBB', data)
@@ -167,6 +167,35 @@ class BarometerSensor(Sensor):
         press = (pH*65536 + pM*256 + pL) / 100.0
         print(f"[BarometerSensor] Ambient temp: {temp}; Pressure Millibars: {press}")
 
+
+
+class QuatSensor(Sensor):
+    GYRO_XYZ = 7
+    ACCEL_XYZ = 7 << 3
+    MAG_XYZ = 1 << 6
+    ACCEL_RANGE_2G  = 0 << 8
+    ACCEL_RANGE_4G  = 1 << 8
+    ACCEL_RANGE_8G  = 2 << 8
+    ACCEL_RANGE_16G = 3 << 8
+
+    def __init__(self):
+        super().__init__()
+        self.data_uuid = "f000aa41-0451-4000-b000-000000000000"
+        self.ctrl_uuid = "f000aa42-0451-4000-b000-000000000000"
+        self.ctrlBits = self.GYRO_XYZ | self.ACCEL_XYZ | self.MAG_XYZ
+
+    async def start_listener(self, client, *args):
+        # start the sensor on the device
+        await client.write_gatt_char(self.ctrl_uuid, struct.pack("<H", self.ctrlBits))
+
+        # listen using the handler
+        await client.start_notify(self.data_uuid, self.callback)
+
+    def callback(self, sender: int, data: bytearray):
+        unpacked_data = struct.unpack("<ffff", data[:-2])
+        print(f"QUAT")
+        print(data)
+        print(unpacked_data)
 
 class LEDAndBuzzer(Service):
     """
@@ -205,24 +234,27 @@ async def run(address):
 
         led_and_buzzer = LEDAndBuzzer()
 
-        light_sensor = OpticalSensor()
-        await light_sensor.start_listener(client)
+        # light_sensor = OpticalSensor()
+        # await light_sensor.start_listener(client)
 
-        humidity_sensor = HumiditySensor()
-        await humidity_sensor.start_listener(client)
+        # humidity_sensor = HumiditySensor()
+        # await humidity_sensor.start_listener(client)
+
+        quat_sensor = QuatSensor()
+        await quat_sensor.start_listener(client)
 
         barometer_sensor = BarometerSensor()
         await barometer_sensor.start_listener(client)
 
-        acc_sensor = AccelerometerSensorMovementSensorMPU9250()
-        gyro_sensor = GyroscopeSensorMovementSensorMPU9250()
-        magneto_sensor = MagnetometerSensorMovementSensorMPU9250()
+        # acc_sensor = AccelerometerSensorMovementSensorMPU9250()
+        # gyro_sensor = GyroscopeSensorMovementSensorMPU9250()
+        # magneto_sensor = MagnetometerSensorMovementSensorMPU9250()
 
-        movement_sensor = MovementSensorMPU9250()
-        movement_sensor.register(acc_sensor)
-        movement_sensor.register(gyro_sensor)
-        movement_sensor.register(magneto_sensor)
-        await movement_sensor.start_listener(client)
+        # movement_sensor = MovementSensorMPU9250()
+        # movement_sensor.register(acc_sensor)
+        # movement_sensor.register(gyro_sensor)
+        # movement_sensor.register(magneto_sensor)
+        # await movement_sensor.start_listener(client)
 
         cntr = 0
 
@@ -255,7 +287,7 @@ if __name__ == "__main__":
 
     os.environ["PYTHONASYNCIODEBUG"] = str(1)
     address = (
-        "54:6C:0E:53:34:DF"
+        "54:6C:0E:53:3A:A1"
         if platform.system() != "Darwin"
         else "6FFBA6AE-0802-4D92-B1CD-041BE4B4FEB9"
     )

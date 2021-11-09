@@ -23,7 +23,9 @@ from commons.commons import (
     BLE_NAME_SENSOR_NECK,
     BLE_NAME_SENSOR_BACK_MID,
     BLE_NAME_SENSOR_BACK_LOW,
-    MQTT_CLASSIFICATIONS
+    MQTT_CLASSIFICATIONS,
+    MODE_EXPORT_DATA, 
+    MODE_RT_SCAN
 )
 
 from mqtt.controller import (
@@ -45,6 +47,8 @@ PATH = "./samples"
 
 led_and_buzzer = None
 data_with_labels = "data_with_labels.csv"
+ble_queue = asyncio.Queue()
+mode = MODE_RT_SCAN
 
 from bleak import (
     BleakClient,
@@ -182,7 +186,19 @@ class GyroscopeSensorMovementSensorMPU9250(MovementSensorMPU9250SubService):
         rawVals = data[0:3]
         # print("[MovementSensor] Gyroscope:", tuple([ v*self.scale for v in rawVals ]))
         self.readings = [getTimeStamp(), tuple([ v*self.scale for v in rawVals ])]
-        
+
+
+class QuatSensor(Sensor):
+    def __init__(self):
+        super().__init__()
+        self.data_uuid = "f000aa61-0451-4000-b000-000000000000"
+        self.ctrl_uuid = "f000aa62-0451-4000-b000-000000000000"
+
+    def callback(self, sender: int, data: bytearray):
+        raw = struct.unpack('<h', data)[0]
+        print(data)
+        print(raw)
+
 
 class OpticalSensor(Sensor):
     def __init__(self):
@@ -256,11 +272,14 @@ class LEDAndBuzzer(Service):
 # On disconnect from a bleak client, this function is called
 def on_disconnect(client: BleakClient):
     print(f"Disconnected from bleak {BLE_ADDR_TO_NAME[client.address]}!")
-
+    
 async def run(address, postfix, flag, flags, mqtt_flag, warn_flag):
     global led_and_buzzer
 
-    async with BleakClient(address, timeout = 15) as client:
+    ble_client = BleakClient(address, timeout = 15)
+    await ble_queue.put(ble_client)
+
+    async with ble_client as client:
         # Upon bleak client connect, register all the sensors
         if client.is_connected:
             client.set_disconnected_callback(on_disconnect)
@@ -285,78 +304,100 @@ async def run(address, postfix, flag, flags, mqtt_flag, warn_flag):
             except Exception as e:
                 print("Fail to start bleak listener for " + postfix)
                 print(e)
+
         # Once connected the client should not disconnect
         # If it does, exception is raised
+        
+        await asyncio.sleep(5)
+
+        datetime_start = getTimeStamp()
+
+        count = 0
+            
         while True:
-            for i in range(10):
-                if warn_flag.is_set():
-                    print("haha")
-                    await led_and_buzzer.notify(client, 0x05)
-                else:
-                    await led_and_buzzer.notify(client, 0x02)
-                await asyncio.sleep(TIME_BETWEEN_READINGS) # Without await, the bleak listener cannot update the readings array, giving errors
-            try:
-                # Check if client is connected, if not raise Exception
-                if not client.is_connected:
-                    print("Bleak client for " + postfix + " not connected")
-                    flag.clear()
-                    raise Exception
 
-                # Set bleak client's flag since bleak client is connected
-                if not flag.is_set():
-                    flag.set()
+            # if mode == MODE_RT_SCAN:
+            #     if count < 5:
+            #         print("==================\n\nCollecting sample %d for calibration... Sit straight please!\n\n==================\n\n" % count)
+            #         count += 1
+
+            # elif mode == MODE_EXPORT_DATA: 
+            #     if (round(getTimeStamp()) - round(datetime_start) > int(sys.argv[2])):
+            #         print("Scan done!!!")
+            #         break 
+            #     else:
+            #         print("Time elapsed: %d" % (round(getTimeStamp()) - round(datetime_start)))
+
+
+            # for i in range(10):
+            #     if warn_flag.is_set() or (count > 2 and count < 5):
+            #         print("haha")
+            #         await led_and_buzzer.notify(client, 0x05)
+            #     else:
+            #         await led_and_buzzer.notify(client, 0x02)
+            #     await asyncio.sleep(TIME_BETWEEN_READINGS) # Without await, the bleak listener cannot update the readings array, giving errors
+
+            # try:
+            #     # Check if client is connected, if not raise Exception
+            #     if not client.is_connected:
+            #         print("Bleak client for " + postfix + " not connected")
+            #         flag.clear()
+            #         raise Exception
+
+            #     # Set bleak client's flag since bleak client is connected
+            #     if not flag.is_set():
+            #         flag.set()
                 
-                print("--------------------")
-                print("All flags: " + str(all(f.is_set() for f in flags)))
-                # Wait for all the flags to be set before taking readings
-                for f in flags:
-                    await f.wait()
+            #     print("--------------------")
+            #     print("All flags: " + str(all(f.is_set() for f in flags)))
+            #     # Wait for all the flags to be set before taking readings
+            #     for f in flags:
+            #         await f.wait()
 
-                # Print all the data collected for all the devices
-                print("--------------------")
-                print("All flags: " + str(all(f.is_set() for f in flags)))
-                acc_readings = acc_sensor.readings
-                gyro_readings = gyro_sensor.readings
-                magneto_readings = magneto_sensor.readings
-                print(postfix + ":acc " + str(acc_readings))
-                print(postfix + ":gyro " + str(gyro_readings))
-                print(postfix + ":mag " + str(magneto_readings))
+            #     # Print all the data collected for all the devices
+            #     print("--------------------")
+            #     print("All flags: " + str(all(f.is_set() for f in flags)))
+            #     acc_readings = acc_sensor.readings
+            #     gyro_readings = gyro_sensor.readings
+            #     magneto_readings = magneto_sensor.readings
+            #     print(postfix + ":acc " + str(acc_readings))
+            #     print(postfix + ":gyro " + str(gyro_readings))
+            #     print(postfix + ":mag " + str(magneto_readings))
 
-                # Get all readings
-                timestamp = acc_readings[0]
-                acc = list(acc_readings[1])
-                gyro = list(gyro_readings[1])
-                magneto = list(magneto_readings[1])
+            #     # Get all readings
+            #     timestamp = acc_readings[0]
+            #     acc = list(acc_readings[1])
+            #     gyro = list(gyro_readings[1])
+            #     magneto = list(magneto_readings[1])
 
-                # Create a dictionary of readings
-                l = ["accX_", "accY_", "accZ_", "magX_", "magY_", "magZ_", "gyroX_", "gyroY_", "gyroZ_"]
-                sensor_keys = [i + postfix for i in l]
-                sensor_val = []
-                sensor_val.extend(acc)
-                sensor_val.extend(magneto)
-                sensor_val.extend(gyro)
-                zip_iter = zip(sensor_keys, sensor_val)
-                datalist = dict(zip_iter)
-                datalist["Timestamp"] = timestamp
+            #     # Create a dictionary of readings
+            #     l = ["accX_", "accY_", "accZ_", "magX_", "magY_", "magZ_", "gyroX_", "gyroY_", "gyroZ_"]
+            #     sensor_keys = [i + postfix for i in l]
+            #     sensor_val = []
+            #     sensor_val.extend(acc)
+            #     sensor_val.extend(magneto)
+            #     sensor_val.extend(gyro)
+            #     zip_iter = zip(sensor_keys, sensor_val)
+            #     datalist = dict(zip_iter)
+            #     datalist["Timestamp"] = timestamp
 
-                # Write to json file
-                json_object = json.dumps(datalist)
-                filename = postfix + ".json"
-                with open(filename, "w") as outfile:
-                    outfile.write(json_object)
+            #     # Write to json file
+            #     json_object = json.dumps(datalist)
+            #     filename = postfix + ".json"
+            #     with open(filename, "w") as outfile:
+            #         outfile.write(json_object)
 
-                # Set mqtt flag after writing to json
-                if not mqtt_flag.is_set():
-                    mqtt_flag.set()
+            #     # Set mqtt flag after writing to json
+            #     if not mqtt_flag.is_set():
+            #         mqtt_flag.set()
 
-
-
-            except Exception as e:
+            except (Exception, KeyboardInterrupt) as e:
                 raise e
 
 # https://stackoverflow.com/questions/59073556/how-to-cancel-all-remaining-tasks-in-gather-if-one-fails
 
 async def main(mqtt_client, category):
+    tasks = []
     while True:
         try:
             # This finds the bluetooth devices and will not exit untill all devices are visible. However, this does not connect to the devices.
@@ -416,19 +457,24 @@ async def main(mqtt_client, category):
                 ) for address in BLE_ADDR_LIST]
 
             tasks.append(asyncio.ensure_future(mqtt_watcher(mqtt_client, mqtt_flags, category)))
+
             # Wait for all tasks
             await asyncio.gather(*tasks)
 
         # Any error, such as an unexpected disconnect from a device, will come here and restart the loop
         # This disconnects from every sensor safely and reconnects again
-        except Exception as e:
+
+        except (Exception, KeyboardInterrupt) as e:
             print("Something messed up. Cancelling everything")
             print(e)
             for t in tasks:
                 t.cancel()
-            print("Restarting loop in 5 seconds")
-            await asyncio.sleep(5)
-            print("Restarting...")
+            if mode == MODE_RT_SCAN:
+                print("Restarting loop in 5 seconds")
+                await asyncio.sleep(5)
+                print("Restarting...")
+            else:
+                loop.close()
 
 
 # Inteface with gateway ble functions
@@ -486,18 +532,16 @@ def mqtt_send_data(mqtt_client, mqtt_flags, category):
         save_df = df
         save_df.to_csv(data_with_labels, index=False)
 
-# async def handleException():
-#     while not ble_queue.empty():
-#         client = await ble_queue.get()
-#         await client.disconnect()
+async def handleException():
+    while not ble_queue.empty():
+        client = await ble_queue.get()
+        await client.disconnect()
 
-async def handleException_(loop):
+def handleException_(loop, context):
     print("lol")
-    # loop = asyncio.get_event_loop()
-    # loop.run_until_complete(handleException())
-    # loop.close()
-
-
+    loop = asyncio.get_event_loop()
+    loop.run_until_complete(handleException())
+    loop.close()        
 
 if __name__ == "__main__":
     """
@@ -513,6 +557,7 @@ if __name__ == "__main__":
     os.environ["PYTHONASYNCIODEBUG"] = str(1)
 
     if len(sys.argv) > 1:
+        mode = MODE_EXPORT_DATA
         print("Collecting data for csv training!")
         print("Collecting ground truth labels for category %s" % (MQTT_CLASSIFICATIONS[int(sys.argv[1])]))
         category = sys.argv[1]
@@ -527,12 +572,12 @@ if __name__ == "__main__":
 
     # Runs the loop forever since main() has a while True loop
     try:
-        loop.set_exception_handler(handleException_)
+        # loop.set_exception_handler(handleException_)
         loop.run_until_complete(main(mqtt_client, category))
+        loop.run_forever()
         
     # Something unexpected happened, whole program will close
-    except Exception as e:
-        print("hi")
-        print(e)
+    except (Exception, KeyboardInterrupt) as e:    
+        handleException_(loop, None)
         loop.close()
 
