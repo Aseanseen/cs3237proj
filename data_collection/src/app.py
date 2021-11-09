@@ -25,7 +25,9 @@ from commons.commons import (
     BLE_NAME_SENSOR_BACK_LOW,
     MQTT_CLASSIFICATIONS,
     MODE_EXPORT_DATA, 
-    MODE_RT_SCAN
+    MODE_RT_SCAN,
+    PROJ_DIR,
+    IO_DIR
 )
 
 from mqtt.controller import (
@@ -46,7 +48,8 @@ TIME_BETWEEN_READINGS = 0.5 # seconds
 PATH = "./samples"
 
 led_and_buzzer = None
-data_with_labels = "data_with_labels.csv"
+data_csv_name = "data_with_labels.csv"
+data_csv_path = os.path.join(IO_DIR, data_csv_name)
 ble_queue = asyncio.Queue()
 mode = MODE_RT_SCAN
 
@@ -189,15 +192,32 @@ class GyroscopeSensorMovementSensorMPU9250(MovementSensorMPU9250SubService):
 
 
 class QuatSensor(Sensor):
+    GYRO_XYZ = 7
+    ACCEL_XYZ = 7 << 3
+    MAG_XYZ = 1 << 6
+    ACCEL_RANGE_2G  = 0 << 8
+    ACCEL_RANGE_4G  = 1 << 8
+    ACCEL_RANGE_8G  = 2 << 8
+    ACCEL_RANGE_16G = 3 << 8
+    readings : list
+
     def __init__(self):
         super().__init__()
-        self.data_uuid = "f000aa61-0451-4000-b000-000000000000"
-        self.ctrl_uuid = "f000aa62-0451-4000-b000-000000000000"
+        self.data_uuid = "f000aa41-0451-4000-b000-000000000000"
+        self.ctrl_uuid = "f000aa42-0451-4000-b000-000000000000"
+        self.ctrlBits = self.GYRO_XYZ | self.ACCEL_XYZ | self.MAG_XYZ | self.ACCEL_RANGE_4G
+
+    async def start_listener(self, client, *args):
+        # start the sensor on the device
+        await client.write_gatt_char(self.ctrl_uuid, struct.pack("<H", self.ctrlBits))
+
+        # listen using the handler
+        await client.start_notify(self.data_uuid, self.callback)
 
     def callback(self, sender: int, data: bytearray):
-        raw = struct.unpack('<h', data)[0]
-        print(data)
-        print(raw)
+        rawVals = struct.unpack("<ffff", data[:-2])
+        self.readings = [getTimeStamp(), tuple(rawVals)]
+
 
 
 class OpticalSensor(Sensor):
@@ -287,15 +307,7 @@ async def run(address, postfix, flag, flags, mqtt_flag, warn_flag):
 
             # Set buzzer if flag is true.
             led_and_buzzer = LEDAndBuzzer()
-
-            acc_sensor = AccelerometerSensorMovementSensorMPU9250()
-            gyro_sensor = GyroscopeSensorMovementSensorMPU9250()
-            magneto_sensor = MagnetometerSensorMovementSensorMPU9250()
-            movement_sensor = MovementSensorMPU9250()
-
-            movement_sensor.register(acc_sensor)
-            movement_sensor.register(gyro_sensor)
-            movement_sensor.register(magneto_sensor)
+            movement_sensor = QuatSensor()
 
             # Start listener for the device
             try:
@@ -316,80 +328,74 @@ async def run(address, postfix, flag, flags, mqtt_flag, warn_flag):
             
         while True:
 
-            # if mode == MODE_RT_SCAN:
-            #     if count < 5:
-            #         print("==================\n\nCollecting sample %d for calibration... Sit straight please!\n\n==================\n\n" % count)
-            #         count += 1
+            if mode == MODE_RT_SCAN:
+                delay = 10
+                if count < 5:
+                    print("==================\n\nCollecting sample %d for calibration... Sit straight please!\n\n==================\n\n" % count)
+                    count += 1
 
-            # elif mode == MODE_EXPORT_DATA: 
-            #     if (round(getTimeStamp()) - round(datetime_start) > int(sys.argv[2])):
-            #         print("Scan done!!!")
-            #         break 
-            #     else:
-            #         print("Time elapsed: %d" % (round(getTimeStamp()) - round(datetime_start)))
+            elif mode == MODE_EXPORT_DATA: 
+                delay = 1
+                if (round(getTimeStamp()) - round(datetime_start) > int(sys.argv[2])):
+                    print("Scan done!!!")
+                    break 
+                else:
+                    print("Time elapsed: %d" % (round(getTimeStamp()) - round(datetime_start)))
 
+            
+            for i in range(delay):
+                if warn_flag.is_set() or (count > 2 and count < 5):
+                    print("haha")
+                    await led_and_buzzer.notify(client, 0x05)
+                else:
+                    await led_and_buzzer.notify(client, 0x02)
+                await asyncio.sleep(TIME_BETWEEN_READINGS) # Without await, the bleak listener cannot update the readings array, giving errors
 
-            # for i in range(10):
-            #     if warn_flag.is_set() or (count > 2 and count < 5):
-            #         print("haha")
-            #         await led_and_buzzer.notify(client, 0x05)
-            #     else:
-            #         await led_and_buzzer.notify(client, 0x02)
-            #     await asyncio.sleep(TIME_BETWEEN_READINGS) # Without await, the bleak listener cannot update the readings array, giving errors
+            try:
+                # Check if client is connected, if not raise Exception
+                if not client.is_connected:
+                    print("Bleak client for " + postfix + " not connected")
+                    flag.clear()
+                    raise Exception
 
-            # try:
-            #     # Check if client is connected, if not raise Exception
-            #     if not client.is_connected:
-            #         print("Bleak client for " + postfix + " not connected")
-            #         flag.clear()
-            #         raise Exception
-
-            #     # Set bleak client's flag since bleak client is connected
-            #     if not flag.is_set():
-            #         flag.set()
+                # Set bleak client's flag since bleak client is connected
+                if not flag.is_set():
+                    flag.set()
                 
-            #     print("--------------------")
-            #     print("All flags: " + str(all(f.is_set() for f in flags)))
-            #     # Wait for all the flags to be set before taking readings
-            #     for f in flags:
-            #         await f.wait()
+                print("--------------------")
+                print("All flags: " + str(all(f.is_set() for f in flags)))
+                # Wait for all the flags to be set before taking readings
+                for f in flags:
+                    await f.wait()
 
-            #     # Print all the data collected for all the devices
-            #     print("--------------------")
-            #     print("All flags: " + str(all(f.is_set() for f in flags)))
-            #     acc_readings = acc_sensor.readings
-            #     gyro_readings = gyro_sensor.readings
-            #     magneto_readings = magneto_sensor.readings
-            #     print(postfix + ":acc " + str(acc_readings))
-            #     print(postfix + ":gyro " + str(gyro_readings))
-            #     print(postfix + ":mag " + str(magneto_readings))
+                # Print all the data collected for all the devices
+                print("--------------------")
+                print("All flags: " + str(all(f.is_set() for f in flags)))
 
-            #     # Get all readings
-            #     timestamp = acc_readings[0]
-            #     acc = list(acc_readings[1])
-            #     gyro = list(gyro_readings[1])
-            #     magneto = list(magneto_readings[1])
+                print(postfix + ":quat" + str(movement_sensor.readings))
 
-            #     # Create a dictionary of readings
-            #     l = ["accX_", "accY_", "accZ_", "magX_", "magY_", "magZ_", "gyroX_", "gyroY_", "gyroZ_"]
-            #     sensor_keys = [i + postfix for i in l]
-            #     sensor_val = []
-            #     sensor_val.extend(acc)
-            #     sensor_val.extend(magneto)
-            #     sensor_val.extend(gyro)
-            #     zip_iter = zip(sensor_keys, sensor_val)
-            #     datalist = dict(zip_iter)
-            #     datalist["Timestamp"] = timestamp
 
-            #     # Write to json file
-            #     json_object = json.dumps(datalist)
-            #     filename = postfix + ".json"
-            #     with open(filename, "w") as outfile:
-            #         outfile.write(json_object)
+                # Get all readings
+                timestamp = movement_sensor.readings[0]
 
-            #     # Set mqtt flag after writing to json
-            #     if not mqtt_flag.is_set():
-            #         mqtt_flag.set()
+                # Create a dictionary of readings
+                l = ["q0_", "q1_", "q2_", "q3_"]
+                sensor_keys = [i + postfix for i in l]
+                sensor_val = movement_sensor.readings[1:]
+                zip_iter = zip(sensor_keys, sensor_val)
+                datalist = dict(zip_iter)
+                datalist["Timestamp"] = timestamp
+
+                # Write to json file
+                json_object = json.dumps(datalist)
+                filename = postfix + ".json"
+                filepath = os.path.join(IO_DIR, filename)
+                with open(filepath, "w") as outfile:
+                    outfile.write(json_object)
+
+                # Set mqtt flag after writing to json
+                if not mqtt_flag.is_set():
+                    mqtt_flag.set()
 
             except (Exception, KeyboardInterrupt) as e:
                 raise e
@@ -474,20 +480,20 @@ async def main(mqtt_client, category):
                 await asyncio.sleep(5)
                 print("Restarting...")
             else:
-                loop.close()
+                asyncio.get_event_loop.close()
 
 
 # Inteface with gateway ble functions
 def get_data_func():
-    filenames = [i+".json" for i in BLE_NAME_LIST]
+    filepaths = [os.path.join(IO_DIR, i+".json") for i in BLE_NAME_LIST]
         
-    exists = [os.path.exists(filename) for filename in filenames]
+    exists = [os.path.exists(filepath) for filepath in filepaths]
     # If all files exist
     if all(exist for exist in exists):
         # Merge the json files
         send_dict = {}
-        for filename in filenames:
-            with open(filename, "r") as f:
+        for filepath in filepaths:
+            with open(filepath, "r") as f:
                 dict_data = json.load(f)
                 send_dict.update(dict_data)
         return send_dict
@@ -522,15 +528,15 @@ def mqtt_send_data(mqtt_client, mqtt_flags, category):
     myCsvRow = df.to_numpy().flatten().tolist()
 
     # If the file already exists, append the row, if not create a new file and save
-    if(os.path.exists(data_with_labels)):
-        save_df = pd.read_csv(data_with_labels)
-        with open(data_with_labels,'a') as fd:
+    if(os.path.exists(data_csv_path)):
+        save_df = pd.read_csv(data_csv_path)
+        with open(data_csv_path,'a') as fd:
             wr = csv.writer(fd, delimiter=',')
             print(myCsvRow)
             wr.writerow(myCsvRow)
     else:
         save_df = df
-        save_df.to_csv(data_with_labels, index=False)
+        save_df.to_csv(data_csv_path, index=False)
 
 async def handleException():
     while not ble_queue.empty():
@@ -544,6 +550,7 @@ def handleException_(loop, context):
     loop.close()        
 
 if __name__ == "__main__":
+    print(PROJ_DIR)
     """
     To find the address, once your sensor tag is blinking the green led after pressing the button, run the discover.py
     file which was provided as an example from bleak to identify the sensor tag device
