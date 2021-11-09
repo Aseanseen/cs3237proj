@@ -1,7 +1,7 @@
-import Wireframe_naive as wf
+import quatviz.Wireframe_naive as wf
 import pygame
 from operator import itemgetter
-import readSensor_naive as rs
+# -*- coding: utf-8 -*-
 
 class ProjectionViewer:
     """ Displays 3D objects on a Pygame screen """
@@ -24,11 +24,12 @@ class ProjectionViewer:
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
                     running = False
-                    sensorInstance.close()
+                    # sensorInstance.close()
             self.clock.tick(loopRate)
-            data = sensorInstance.getSerialData()
-            angularVeloctiy = [data[0], data[1], data[2]]
-            self.wireframe.quatRotate(angularVeloctiy, 1/loopRate)
+            # data = sensorInstance.getSerialData()
+            # angularVeloctiy = [data[0], data[1], data[2]]
+            # self.wireframe.quatRotate(angularVeloctiy, 1/loopRate)
+            self.wireframe.getQuatFromJson()
             self.display()
             pygame.display.flip()
 
@@ -134,15 +135,7 @@ def initializeCube():
     return block
 
 
-if __name__ == '__main__':
-    portName = '/dev/ttyUSB0'
-    # portName = 'COM6'
-    baudRate = 115200
-    dataNumBytes = 2  # number of bytes of 1 data point
-    numParams = 9  # number of plots in 1 graph
-    s = rs.SerialRead(portName, baudRate, dataNumBytes, numParams)  # initializes all required variables
-    s.readSerialStart()  # starts background thread
-
+def main():
     block = initializeCube()
     pv = ProjectionViewer(640, 480, block)
-    pv.run(s)
+    pv.run(None)

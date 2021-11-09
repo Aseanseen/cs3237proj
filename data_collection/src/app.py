@@ -43,8 +43,12 @@ from time import (
 )
 import pandas as pd
 import csv
+import fasteners
 
-TIME_BETWEEN_READINGS = 0.5 # seconds
+lock = fasteners.InterProcessLock('%s/tmp_lock_file' % IO_DIR)
+
+
+TIME_BETWEEN_READINGS = 0.1 # seconds
 PATH = "./samples"
 
 led_and_buzzer = None
@@ -216,8 +220,7 @@ class QuatSensor(Sensor):
 
     def callback(self, sender: int, data: bytearray):
         rawVals = struct.unpack("<ffff", data[:-2])
-        self.readings = [getTimeStamp(), tuple(rawVals)]
-
+        self.readings = [getTimeStamp(), *tuple(rawVals)]
 
 
 class OpticalSensor(Sensor):
@@ -387,11 +390,13 @@ async def run(address, postfix, flag, flags, mqtt_flag, warn_flag):
                 datalist["Timestamp"] = timestamp
 
                 # Write to json file
+                
                 json_object = json.dumps(datalist)
                 filename = postfix + ".json"
                 filepath = os.path.join(IO_DIR, filename)
-                with open(filepath, "w") as outfile:
-                    outfile.write(json_object)
+                with lock:
+                    with open(filepath, "w") as outfile:
+                        outfile.write(json_object)
 
                 # Set mqtt flag after writing to json
                 if not mqtt_flag.is_set():
@@ -530,7 +535,7 @@ def mqtt_send_data(mqtt_client, mqtt_flags, category):
     # If the file already exists, append the row, if not create a new file and save
     if(os.path.exists(data_csv_path)):
         save_df = pd.read_csv(data_csv_path)
-        with open(data_csv_path,'a') as fd:
+        with open(data_csv_path,'a', newline='', encoding='utf-8') as fd:
             wr = csv.writer(fd, delimiter=',')
             print(myCsvRow)
             wr.writerow(myCsvRow)

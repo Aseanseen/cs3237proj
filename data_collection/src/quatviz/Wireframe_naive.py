@@ -1,5 +1,15 @@
 import numpy as np
-import Quaternion_naive as quat
+from quatviz import Quaternion_naive as quat
+import os
+import json
+import fasteners
+
+from commons.commons import (
+    BLE_NAME_LIST,
+    IO_DIR
+)
+
+lock = fasteners.InterProcessLock('%s/tmp_lock_file'% IO_DIR)
 
 # Node stores each point of the block
 class Node:
@@ -22,6 +32,31 @@ class Wireframe:
         self.edges = []
         self.faces = []
         self.quaternion = quat.Quaternion()
+
+    # Inteface with gateway ble functions
+    def get_data_func(self):
+        filepaths = [os.path.join(IO_DIR, i+".json") for i in BLE_NAME_LIST]
+            
+        exists = [os.path.exists(filepath) for filepath in filepaths]
+        # If all files exist
+        if all(exist for exist in exists):
+            # Merge the json files
+            send_dict = {}
+            for filepath in filepaths:
+                with open(filepath, "r") as f:
+                    dict_data = json.load(f)
+                    send_dict.update(dict_data)
+            return send_dict
+        else:
+            return
+
+    def getQuatFromJson(self):
+        dev = BLE_NAME_LIST[0]
+        with lock:
+            q_inp = self.get_data_func()
+        l = ["q0_", "q1_", "q2_", "q3_"]
+        self.quaternion.q = [q_inp[i+dev] for i in l]
+
 
     def addNodes(self, nodeList, colorList):
         for node, color in zip(nodeList, colorList):
