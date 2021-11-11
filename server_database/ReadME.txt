@@ -1,4 +1,6 @@
-You can always refer this link https://medium.com/analytics-vidhya/heroku-deploy-your-flask-app-with-a-database-online-d19274a7a749
+You can always refer this link
+https://rg2021.medium.com/flask-with-sqlalchemy-database-39fc0959609c
+https://medium.com/analytics-vidhya/heroku-deploy-your-flask-app-with-a-database-online-d19274a7a749
 
 Step 1. Create a new app on your heroku 
 
