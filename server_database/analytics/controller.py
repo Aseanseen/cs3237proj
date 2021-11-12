@@ -4,9 +4,11 @@ import matplotlib.dates as mdates
 from datetime import datetime
 from commons.commons import (
     CLASSIFICATIONS,
+    CLASSIFICATION_PROPER,
+    CLASSIFICATION_ENUM_TO_NAME,
     MQTT_CLASSIFICATIONS
 )
-import calmap
+# import calmap
 
 def get_plot(posture, dates):
     posture
@@ -43,47 +45,25 @@ def get_plot(posture, dates):
     plt.savefig("analytics.png")
 
 '''
-Given a 2D list of the count of the types of postures and 1D list of dates
-2D list of count:
-[[CLASSIFICATION_PROPER, CLASSIFICATION_FORWARD, CLASSIFICATION_BACKWARD, CLASSIFICATION_LEFT, CLASSIFICATION_RIGHT]]
+Given a dict where keys are the count of the types of postures and values are list of dates
 Plot a stack bar plot
 Save it into a png
 '''
-def get_stack_bar_plot(postures, dates):
-    x = dates
-    y1 = [i[0] for i in postures]
-    y2 = [i[1] for i in postures]
-    y3 = [i[2] for i in postures]
-    y4 = [i[3] for i in postures]
-    y5 = [i[4] for i in postures]
-    plt.bar(x, y1, color='g')
-    plt.bar(x, y2, bottom=y1, color='b')
-    plt.bar(x, y3, bottom=y1 + y2, color='r')
-    plt.bar(x, y4, bottom=y1 + y2 + y3, color='g')
-    plt.bar(x, y4, bottom=y1 + y2 + y3 + y4, color='y')
-    plt.set(title="Stack Bar Plot of Postures")
-    plt.savefig("bar.png")
-
-'''
-Given a 2D list of the count of the types of postures and 1D list of dates
-2D list of count:
-[[CLASSIFICATION_PROPER, CLASSIFICATION_FORWARD, CLASSIFICATION_BACKWARD, CLASSIFICATION_LEFT, CLASSIFICATION_RIGHT]]
-Plot a stack bar plot
-Save it into a png
-'''
-def get_stack_bar_plot(postures, dates):
-    x = dates
-    y1 = [i[0] for i in postures]
-    y2 = [i[1] for i in postures]
-    y3 = [i[2] for i in postures]
-    y4 = [i[3] for i in postures]
-    y5 = [i[4] for i in postures]
-    plt.bar(x, y1, color='g')
-    plt.bar(x, y2, bottom=y1, color='b')
-    plt.bar(x, y3, bottom=y1 + y2, color='r')
-    plt.bar(x, y4, bottom=y1 + y2 + y3, color='g')
-    plt.bar(x, y4, bottom=y1 + y2 + y3 + y4, color='y')
-    plt.set(title="Stack Bar Plot of Postures")
+def get_stack_bar_plot(sum_dict):
+    x = sum_dict.keys()
+    y0 = np.array([item[0] for item in sum_dict.values()])
+    y1 = np.array([item[1] for item in sum_dict.values()])
+    y2 = np.array([item[2] for item in sum_dict.values()])
+    y3 = np.array([item[3] for item in sum_dict.values()])
+    y4 = np.array([item[4] for item in sum_dict.values()])
+    order = [y0, y1, y2, y3, y4]
+    plt.bar(x, y0, color='y')
+    plt.bar(x, y1, bottom=order[0], color='b')
+    plt.bar(x, y2, bottom=sum(order[:2]), color='r')
+    plt.bar(x, y3, bottom=sum(order[:3]), color='m')
+    plt.bar(x, y4, bottom=sum(order[:4]), color='g')
+    plt.title("Stack Bar Plot of Postures")
+    plt.legend([CLASSIFICATION_ENUM_TO_NAME[classification] for classification in CLASSIFICATIONS])
     plt.savefig("bar.png")
 
 # https://www.youtube.com/watch?v=cKMEL9xgq2I
@@ -92,10 +72,11 @@ Given a Pandas Series indexed by a DatetimeIndex
 Plot a calendar heat map plot
 Save it into a png
 '''
-def get_cal_heat_map_plot(heatmap_series):
-    plt.figure(figsize=(16, 8))
-    calmap.yearplot(data=heatmap_series, year=2021)
-    plt.suptitle('Calendar Heatmap', y=.65, fontsize=20)
+# def get_cal_heat_map_plot(heatmap_series):
+#     plt.figure(figsize=(16, 8))
+#     calmap.yearplot(data=heatmap_series, year=2021)
+#     plt.suptitle('Calendar Heatmap', y=.65, fontsize=20)
+#     plt.savefig("calmap.png")
 
 def get_advice(posture, dates):
     count = {}
