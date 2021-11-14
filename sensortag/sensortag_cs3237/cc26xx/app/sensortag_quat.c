@@ -193,6 +193,8 @@ void SensorTagQuat_init(void)
   appState = APP_STATE_OFF;
   nMotions = 0;
 
+  SensorMpu9250_reset();
+  calibrateMPU9250(gyroBias, accelBias);
   if (SensorMpu9250_init())
   {
     SensorTagQuat_reset();

@@ -14,7 +14,8 @@ extern "C"
 
 extern volatile float beta;				// algorithm gain
 extern volatile float q0, q1, q2, q3;	// quaternion of sensor frame relative to auxiliary frame
-
+extern float magCalibration[3], magbias[3];  // Factory mag calibration and mag bias
+extern float gyroBias[3], accelBias[3]; // Bias corrections for gyro and accelerometer
 //---------------------------------------------------------------------------------------------------
 // Function declarations
 extern void readQuatData( uint8* data );

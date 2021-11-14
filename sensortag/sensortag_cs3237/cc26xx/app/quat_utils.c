@@ -4,15 +4,21 @@
 
 #include <math.h>
 
-#define sampleFreq	100.0f		// sample frequency in Hz
+#define sampleFreq	250.0f		// sample frequency in Hz
 #define betaDef		0.1f		// 2 * proportional gain
 #define Kp 2.0f * 5.0f // these are the free parameters in the Mahony filter and fusion scheme, Kp for proportional feedback, Ki for integral
 #define Ki 0.0f
 
 
-volatile float beta = betaDef;								// 2 * proportional gain (Kp)
+float PI = 3.14159265358979323846f;
+float GyroMeasError = PI * (60.0f / 180.0f);     // gyroscope measurement error in rads/s (start at 60 deg/s), then reduce after ~10 s to 3
+float beta = sqrt(3.0f / 4.0f) * GyroMeasError;  // compute beta
+
 volatile float q0 = 1.0f, q1 = 0.0f, q2 = 0.0f, q3 = 0.0f;	// quaternion of sensor frame relative to auxiliary frame
 float eInt[3] = {0.0f, 0.0f, 0.0f};              // vector to hold integral error for Mahony method
+
+float magCalibration[3] = {0, 0, 0}, magbias[3] = {0, 0, 0};  // Factory mag calibration and mag bias
+float gyroBias[3] = {0, 0, 0}, accelBias[3] = {0, 0, 0}; // Bias corrections for gyro and accelerometer
 
 float invSqrt(float x);
 static float calcXValueG( uint8 data[] );
@@ -32,8 +38,10 @@ void readQuatData( uint8 data[9] );
 static float calcXValueG( uint8 data[] )
 {
     //Orientation of sensor on board means we need to swap X (multiplying with -1)
-    int16 rawX = (data[0] & 0xff) | ((data[1] << 8) & 0xff00);
-    float lastX = (((float)rawX * 1.0) / ( 65536 / 500.0 ));
+    // int16 rawX = (data[0] & 0xff) | ((data[1] << 8) & 0xff00);
+	// GFS 250dps
+	int16 rawX = (data[0] & 0xff) | ((data[1] << 8) & 0xff00);
+    float lastX = (((float)rawX * 1.0) / ( 65536 / 500.0 )) * -1;
     return lastX;
 }
 
@@ -41,7 +49,7 @@ static float calcYValueG( uint8 data[] )
 {
     //Orientation of sensor on board means we need to swap X (multiplying with -1)
     int16 rawY = (data[2] & 0xff) | ((data[3] << 8) & 0xff00);
-    float lastY = (((float)rawY * 1.0) / ( 65536 / 500.0 ));
+    float lastY = (((float)rawY * 1.0) / ( 65536 / 500.0 )) * -1;
     return lastY;
 }
 
@@ -55,41 +63,49 @@ static float calcZValueG( uint8 data[] )
 
 static float calcXValueA( uint8 data[] )
 {
-
-    return ((data[0] * 1.0) / (32768 / 4.0));
+	int16 rawA = (data[0] & 0xff) | ((data[1] << 8) & 0xff00);
+    return (((float)rawA * 1.0) / (32768 / 4.0));
 }
 static float calcYValueA( uint8 data[] )
 {
     //Orientation of sensor on board means we need to swap Y (multiplying with -1)
-
-    return ((data[1] * 1.0) / (32768 / 4.0));
+	int16 rawA = (data[2] & 0xff) | ((data[3] << 8) & 0xff00) * -1;
+    return (((float)rawA * 1.0) / (32768 / 4.0));
 }
 static float calcZValueA( uint8 data[] )
 {
-
-    return ((data[2] * 1.0) / (32768 / 4.0));
+	int16 rawA = (data[4] & 0xff) | ((data[5] << 8) & 0xff00);
+    return (((float)rawA * 1.0) / (32768 / 4.0));
 }
 
 
 static float calcXValueM( uint8 data[] )
 {
-    //Orientation of sensor on board means we need to swap X (multiplying with -1)
-    int16 rawX = (data[0] & 0xff) | ((data[1] << 8) & 0xff00);
-    float lastX = (((float)rawX * 1.0) / ( 65536 / 2000.0 )) * -1;
-    return lastX;
+	int16 rawM = (data[0] & 0xff) | ((data[1] << 8) & 0xff00) * -1;
+	// return ((float)rawM) * 10.0*4912.0/8190.0;
+    // //Orientation of sensor on board means we need to swap X (multiplying with -1)
+    // int16 rawX = (data[0] & 0xff) | ((data[1] << 8) & 0xff00);
+    // float lastX = (((float)rawX * 1.0) / ( 65536 / 2000.0 )) * -1;
+    // return lastX;
+	return rawM;
 }
 static float calcYValueM( uint8 data[] )
 {
-    //Orientation of sensor on board means we need to swap Y (multiplying with -1)
-    int16 rawY = ((data[2] & 0xff) | ((data[3] << 8) & 0xff00));
-    float lastY = (((float)rawY * 1.0) / ( 65536 / 2000.0 )) * -1;
-    return lastY;
+    // //Orientation of sensor on board means we need to swap Y (multiplying with -1)
+    int16 rawM = ((data[2] & 0xff) | ((data[3] << 8) & 0xff00)) * -1;
+    // float lastY = (((float)rawY * 1.0) / ( 65536 / 2000.0 )) * -1;
+	// int16 rawM = (data[2] & 0xff) | ((data[3] << 8) & 0xff00) * -1;
+    // return ((float)rawM) * 10.0*4912.0/8190.0;
+	return rawM;
 }
 static float calcZValueM( uint8 data[] )
 {
-    int16 rawZ = (data[4] & 0xff) | ((data[5] << 8) & 0xff00);
-    float lastZ =  ((float)rawZ * 1.0) / ( 65536 / 2000.0 );
-    return lastZ;
+    int16 rawM = (data[4] & 0xff) | ((data[5] << 8) & 0xff00);
+    // float lastZ =  ((float)rawZ * 1.0) / ( 65536 / 2000.0 );
+    // return lastZ;
+	// int16 rawM = (data[4] & 0xff) | ((data[5] << 8) & 0xff00);
+	// return ((float)rawM) * 10.0*4912.0/8190.0;
+	return rawM;
 }
 
 union Data
@@ -110,17 +126,17 @@ void updateQuatData( void )
 	qData[0]=qq0.u[0];
 	qData[1]=qq0.u[1];
 	qData[2]=qq0.u[2];
-	qData[3]=qq0.u[3];
+	qData[3]=qq0.u[3]; 
 
 	qData[4]=qq0.u[0];
 	qData[5]=qq0.u[1];
 	qData[6]=qq0.u[2];
-	qData[7]=qq0.u[3];
+	qData[7]=qq0.u[3]; 
 
 	qData[8]=qq2.u[0];
 	qData[9]=qq2.u[1];
 	qData[10]=qq2.u[2];
-	qData[11]=qq2.u[3];
+	qData[11]=qq2.u[3]; 
 
 	qData[12]=qq3.u[0];
 	qData[13]=qq3.u[1];
@@ -226,15 +242,15 @@ void readQuatData( uint8 data[18] )
 	// float mx=mData[0];
 	// float my=mData[1];
 	// float mz=mData[2];
-	float gx=calcXValueG(gData);
+	float gx=calcXValueG(gData) - gyroBias[0];
 	float gy=calcYValueG(gData);
 	float gz=calcZValueG(gData);
 	float ax=calcXValueA(aData);
 	float ay=calcYValueA(aData);
 	float az=calcZValueA(aData);
-	float mx=mData[0];
-	float my=mData[1];
-	float mz=mData[2];
+	float mx=calcXValueM(mData);
+	float my=calcYValueM(mData);
+	float mz=calcZValueM(mData);
 	// float mx=calcXValueM(mData);
 	// float my=calcYValueM(mData);
 	// float mz=calcZValueM(mData);
@@ -448,5 +464,36 @@ float invSqrt(float x) {
 	y = y * (1.5f - (halfx * y * y));
 	return y;
 }
+
+void writeByte(uint8_t address, uint8_t subAddress, uint8_t data)
+{
+   char data_write[2];
+   data_write[0] = subAddress;
+   data_write[1] = data;
+   SensorI2C_writeReg(address, data_write, 2, 0);
+}
+
+char readByte(uint8_t address, uint8_t subAddress)
+{
+    char data[1]; // `data` will store the register data     
+    char data_write[1];
+    data_write[0] = subAddress;
+    i2c.write(address, data_write, 1, 1); // no stop
+    i2c.read(address, data, 1, 0); 
+    return data[0]; 
+}
+
+void readBytes(uint8_t address, uint8_t subAddress, uint8_t count, uint8_t * dest)
+{     
+    char data[14];
+    char data_write[1];
+    data_write[0] = subAddress;
+    i2c.write(address, data_write, 1, 1); // no stop
+    i2c.read(address, data, count, 0); 
+    for(int ii = 0; ii < count; ii++) {
+     dest[ii] = data[ii];
+    }
+}
+
 
 
