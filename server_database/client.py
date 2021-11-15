@@ -37,8 +37,8 @@ def url_delete_user(user):
     }
     requests.delete(url_delete_user, params=dict_to_enter)
 
-def clear_db():
-    requests.delete(url_clear_db)
+# def clear_db():
+#     requests.delete(url_clear_db)
 
 def fill_with_1_year_1_user(user):
     year = 2021
