@@ -25,7 +25,8 @@ app = Flask(__name__)
 
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///User.sqlite3'
-	
+# app.config['SQLALCHEMY_DATABASE_URI'] = 'postgres://twzrkawqgsbszj:bbea1188c97217884a56f6eb3f5a53da5010937789bacb879619a5b3f1e9e645@ec2-3-225-30-189.compute-1.amazonaws.com:5432/d46843sjl1lg0l'
+
 db = SQLAlchemy(app)
 
 class User(db.Model):
@@ -196,6 +197,17 @@ def delete_data_all():
 			db.session.commit()
 	return "None"
 
+'''
+Given a name
+Delete every entry of that name in the database
+'''
+@app.route('/clear_db', methods = ["DELETE"]) 
+def clear_db():
+	if request.method == 'DELETE':
+		for entry in User.query.all():
+			db.session.delete(entry)
+			db.session.commit()
+	return "None"
 
 @app.route('/get_analytics_data', methods = ["GET"]) 
 def get_analytics_data():

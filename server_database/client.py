@@ -8,17 +8,19 @@ from random import randint
 TEST_USER_1 = "Karthig"
 TEST_USER_2 = "Long"
 
-url = "https://demoiot3237.herokuapp.com/add_data"
+url = "https://demoiot3237.herokuapp.com"
 # url = "http://127.0.0.1:5000"
 
 url_add_data = url + "/add_data"
 url_get_data = url + "/get_data"
 url_get_all_time_ave = url + "/get_all_time_ave"
 url_delete_data_all = url + "/delete_data_all"
+url_clear_db = url + "/clear_db"
 
 def main():
-    # test_get_all_time_ave(TEST_USER_1)
-    delete_data_all(TEST_USER_1)
+    test_get_all_time_ave(TEST_USER_1)
+    # delete_data_all(TEST_USER_1)
+    # clear_db()
 
 def test_get_all_time_ave(user):
     fill_with_1_year_1_user(user)
@@ -33,6 +35,9 @@ def delete_data_all(user):
         "name" : user
     }
     requests.delete(url_delete_data_all, params=dict_to_enter)
+
+def clear_db():
+    requests.delete(url_clear_db)
 
 def fill_with_1_year_1_user(user):
     year = 2021
