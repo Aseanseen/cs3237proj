@@ -6,7 +6,8 @@ import datetime
 from analytics.controller import (
 	get_plot,
 	get_advice,
-	get_stack_bar_plot
+	get_stack_bar_plot,
+	STACK_BAR_PLOT_PATH
 )
 from utils.utils import get_base64string_from_img_path
 
@@ -80,56 +81,51 @@ def get_data():
 		start_time = int(request.args.get("start_time"))
 		end_time = int(request.args.get("end_time"))
 		name = str(request.args.get("name"))
-		print(start_time)
-		print(end_time)
-		print(name)
+
+		# Filter based on given params
 		entries_to_analyse = User.query.\
 			filter(User.name == name).\
 			filter(User.timecollect >= start_time).\
 			filter(User.timecollect <= end_time).\
 			all()
+
+		# If get is invalid, return empty dictionary
+		if not entries_to_analyse:
+			return {}, 200
+		
 		print(entries_to_analyse)
 		
 		list_of_datetime = [datetime.datetime.fromtimestamp(user.timecollect) for user in entries_to_analyse]
 		list_of_datetime_str = [datetime.strftime("%m/%d/%Y, %H:%M:%S") for datetime in list_of_datetime]
 		list_of_classifications = [user.classification for user in entries_to_analyse]
 
-		print(list_of_datetime)
-		print(list_of_classifications)
-
 		list_of_dates = [datetime.strftime("%m/%d/%Y") for datetime in list_of_datetime]
 		result = {}
+
+		# Creates a dictionary where key is date and values is a list of the classification in that date
 		for date, classification in zip(list_of_dates, list_of_classifications):
 			if date in result:
 				result[date].append(classification)
 			else:
 				result[date] = [classification]
 
+		# Creates a dictionary where key is date and values are count of each classification in that date
+		# Sequence of the count follows the sequence of CLASSIFICATIONS
 		for key in result:
 			result[key] = [result[key].count(classification) for classification in CLASSIFICATIONS]
 
-		print(result)
-
 		get_stack_bar_plot(result)
+		advice = get_advice(result)
 
-		# payload = {
-		# 	"img" : get_base64string_from_img_path("bar.png")
-		# }
-		# return payload, 200
-		
-		advice = get_advice(list_of_classifications, list_of_datetime)
-		print(advice)
-		#TODO: Comput the result based on start_time and end_times
-		#user_data = User.query.all()
-		# payload = {
-		# 	"img" : get_base64string_from_img_path("analytics.png"),
-		# 	"advice" : advice
-		# }
-		# print(payload)
-		# return payload
-
-		# result = {'Straight': 20, 'Lean forward': 20, 'Lean backward': 20, 'Lean right': 20, 'Lean left': 20}
-	return result, 200
+		# Sends a dict of 
+		# 1. a image in bas64 string format
+		# 2. dict where keys are dates, values are string advice for each date
+		payload = {
+			"img" : get_base64string_from_img_path(STACK_BAR_PLOT_PATH),
+			"advice" : advice
+		}
+		print(payload)
+	return payload, 200
 
 @app.route('/remove_data_all', methods = ["POST"]) 
 def remove_data_all():

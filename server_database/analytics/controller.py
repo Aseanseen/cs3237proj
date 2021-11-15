@@ -10,6 +10,9 @@ from commons.commons import (
 )
 # import calmap
 
+STACK_BAR_PLOT_TITLE = "Stack Bar Plot of Postures"
+STACK_BAR_PLOT_PATH = "bar.png"
+
 def get_plot(posture, dates):
     posture
     # Choose some nice levels
@@ -45,7 +48,7 @@ def get_plot(posture, dates):
     plt.savefig("analytics.png")
 
 '''
-Given a dict where keys are the count of the types of postures and values are list of dates
+Given a dict where keys are the dates and values are the count of the types of postures in that day
 Plot a stack bar plot
 Save it into a png
 '''
@@ -62,9 +65,9 @@ def get_stack_bar_plot(sum_dict):
     plt.bar(x, y2, bottom=sum(order[:2]), color='r')
     plt.bar(x, y3, bottom=sum(order[:3]), color='m')
     plt.bar(x, y4, bottom=sum(order[:4]), color='g')
-    plt.title("Stack Bar Plot of Postures")
+    plt.title(STACK_BAR_PLOT_TITLE)
     plt.legend([CLASSIFICATION_ENUM_TO_NAME[classification] for classification in CLASSIFICATIONS])
-    plt.savefig("bar.png")
+    plt.savefig(STACK_BAR_PLOT_PATH)
 
 # https://www.youtube.com/watch?v=cKMEL9xgq2I
 '''
@@ -78,12 +81,21 @@ Save it into a png
 #     plt.suptitle('Calendar Heatmap', y=.65, fontsize=20)
 #     plt.savefig("calmap.png")
 
-def get_advice(posture, dates):
-    count = {}
-    advice = ""
-    for classification in posture:
-        count[classification] = 1 if classification not in count.keys() else count[classification] + 1
-    
-    for classification in CLASSIFICATIONS:
-        advice += "\n[%s] : You were in this posture %.3f percent of the time!\n" % (classification, (count[classification]/len(posture)))
-    return advice
+'''
+Given a dict where keys are the dates and values are the count of the types of postures in that day
+Get the analysis of the time spent in each posture for each day
+Returns a dict
+
+Note: The dict passed in must have values where the classifation is in the same sequence as in CLASSIFICATIONS
+'''
+def get_advice(sum_dict):
+    res_dict = {}
+    classes = [CLASSIFICATION_ENUM_TO_NAME[classification] for classification in CLASSIFICATIONS]
+    # Iterate through days
+    for key, value in sum_dict.items():
+        advice = "Date: %s\n" %key
+        # For every day, iterate through the postures
+        for i in range(len(classes)):
+            advice += "[%s] : You were in this posture %.3f percent of the time!\n" % (classes[i], (value[i]/sum(value)))
+        res_dict[key] = advice
+    return res_dict

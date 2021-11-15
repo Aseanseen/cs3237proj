@@ -25,16 +25,16 @@ def main():
         "classification": 1
     }
 
-    for i in range(10):
-        dict_to_enter = {
-            'name': "Sally",
-            'timecollect': round(int(datetime.datetime.timestamp(datetime.datetime.now() + i * datetime.timedelta(seconds=5)))), 
-            'acc_x_neck': 0.333, 
-            'acc_y_neck': 0.345, 
-            'acc_z_neck': 0.567, 
-            "classification": commons.CLASSIFICATIONS[i % len(commons.CLASSIFICATIONS)]
-        }
-        requests.put(url_add_data, params=dict_to_enter)
+    # for i in range(10):
+    #     dict_to_enter = {
+    #         'name': "Sally",
+    #         'timecollect': round(int(datetime.datetime.timestamp(datetime.datetime.now() + i * datetime.timedelta(seconds=5)))), 
+    #         'acc_x_neck': 0.333, 
+    #         'acc_y_neck': 0.345, 
+    #         'acc_z_neck': 0.567, 
+    #         "classification": commons.CLASSIFICATIONS[i % len(commons.CLASSIFICATIONS)]
+    #     }
+    #     requests.put(url_add_data, params=dict_to_enter)
 
     dict_to_enter = {
         "name" : "Sally",
