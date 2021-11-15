@@ -199,7 +199,7 @@ void SensorTagQuat_init(void)
     SensorTagQuat_reset();
     SensorTagBuzzer_open(hGpioPin);
     SensorTagBuzzer_setFrequency(2000);
-    // SensorMPU9250_calibrate_GyroAcc();
+    SensorMPU9250_calibrate_GyroAcc();
 //    SensorMPU9250_calibrate_Mag();
     SensorTagBuzzer_close();
     SensorMpu9250_registerCallback(SensorTagQuat_processInterrupt);

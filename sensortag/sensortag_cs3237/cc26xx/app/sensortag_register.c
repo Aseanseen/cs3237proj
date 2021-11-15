@@ -64,7 +64,7 @@
 #include "SensorI2C.h"
 #endif
 #ifdef Board_MPU9250_ADDR
-#include "SensorMpu9250.h"
+#include "SensorMpu9250_Q.h"
 #endif
 
 /*********************************************************************

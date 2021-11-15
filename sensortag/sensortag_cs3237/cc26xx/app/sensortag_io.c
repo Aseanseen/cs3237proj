@@ -61,7 +61,7 @@
 #include "board.h"
 #include "peripheral.h"
 #include "util.h"
-#include "SensorMpu9250.h"
+#include "SensorMpu9250_Q.h"
 #include "ExtFlash.h"
 #include "SensorUtil.h"
 

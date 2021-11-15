@@ -193,6 +193,7 @@ void readQuatData( uint8 data[18] )
 		mData[i] = data[12 + i];
 	}
 
+
 	// getMagScale(&magScale);
 	float gx=calcXValueG(gData) - gyroBiasX;
 	float gy=calcYValueG(gData) - gyroBiasY;
@@ -244,7 +245,8 @@ void MadgwickQuaternionUpdate(float gx, float gy, float gz, float ax, float ay, 
 	float q2q3 = q2 * q3;
 	float q3q3 = q3 * q3;
 
-	// float beta = sqrt(3.0f / 4.0f) * 3.14159265358979323846f * (60.0f / 180.0f);
+	// float GyroMeasError = PI * (40.0f / 180.0f);
+	// float beta = sqrt(3.0f / 4.0f) * GyroMeasError;
 	float beta = 0.1f;
 	// Normalise accelerometer measurement
 	norm = sqrt(ax * ax + ay * ay + az * az);

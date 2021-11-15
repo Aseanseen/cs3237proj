@@ -42,7 +42,7 @@
 * ------------------------------------------------------------------------------
 */
 #include "Board.h"
-#include "SensorMpu9250.h"
+#include "SensorMpu9250_Q.h"
 #include "SensorOpt3001.h" // For reset of I2C bus
 #include "SensorUtil.h"
 #include "SensorI2C.h"

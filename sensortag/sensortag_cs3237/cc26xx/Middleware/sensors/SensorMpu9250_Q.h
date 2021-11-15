@@ -97,7 +97,6 @@ typedef void (*SensorMpu9250CallbackFn_t)(void);
  *                                          Functions
  * -----------------------------------------------------------------------------
  */
-extern void getMagScale(uint8_t* input) ;
 bool SensorMpu9250_init(void);
 bool SensorMpu9250_reset(void);
 void SensorMpu9250_registerCallback(SensorMpu9250CallbackFn_t);

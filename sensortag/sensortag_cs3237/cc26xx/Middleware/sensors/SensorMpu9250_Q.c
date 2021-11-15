@@ -242,12 +242,12 @@ static uint8_t val;
 //volatile float magBias[3] = {0, 0, 0};
 
 
-volatile float magCalX = 0, magCalY = 0, magCalZ = 0, magScaleX = 1.0, magScaleY = 1.0, magScaleZ = 1.0, magBiasX = +470., magBiasY = +120., magBiasZ = +125.;
+volatile float magCalX = 0, magCalY = 0, magCalZ = 0, magScaleX = 1.0, magScaleY = 1.0, magScaleZ = 1.0, magBiasX = 0.0, magBiasY = 0.0, magBiasZ = 0.0;
 volatile float gyroBiasX=0, gyroBiasY=0,gyroBiasZ=0, accelBiasX=0, accelBiasY=0,accelBiasZ=0;
 
 // Magnetometer control
 static uint8_t scale = MFS_16BITS;      // 16 bit resolution
-static uint8_t mode = MAG_MODE_CONT1;  // Operating mode
+static uint8_t mode = MAG_MODE_SINGLE;  // Operating mode
 
 // Pins that are used by the MPU9250
 static PIN_Config MpuPinTable[] =
@@ -268,7 +268,6 @@ static SensorMpu9250CallbackFn_t isrCallbackFn = NULL;
 * ------------------------------------------------------------------------------
 *
 
-/*******************************************************************************
 * @fn          SensorMpu9250_powerOn
 *
 * @brief       This function turns on the power supply to MPU9250

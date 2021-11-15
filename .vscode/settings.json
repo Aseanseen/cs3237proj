@@ -3,6 +3,7 @@
         "limits": "cpp",
         "*.tcc": "cpp",
         "type_traits": "cpp",
-        "sensormpu9250.h": "c"
+        "sensormpu9250.h": "c",
+        "sensormpu9250_q.h": "c"
     }
 }
