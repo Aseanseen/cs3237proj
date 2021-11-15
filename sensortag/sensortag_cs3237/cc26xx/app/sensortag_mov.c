@@ -60,7 +60,7 @@
 #include "board.h"
 #include "movementservice.h"
 #include "sensortag_mov.h"
-#include "SensorMpu9250.h"
+#include "SensorMpu9250_Q.h"
 #include "SensorTagTest.h"
 #include "SensorUtil.h"
 #include "util.h"

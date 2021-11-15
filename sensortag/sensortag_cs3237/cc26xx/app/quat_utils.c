@@ -1,35 +1,22 @@
 #include "quat_utils.h"
 #include "quatservice.h"
 #include "hal_types.h"
+#include "SensorMpu9250_Q.h"
 
 #include <math.h>
 
-#define sampleFreq	250.0f		// sample frequency in Hz
-#define betaDef		0.1f		// 2 * proportional gain
 #define Kp 2.0f * 5.0f // these are the free parameters in the Mahony filter and fusion scheme, Kp for proportional feedback, Ki for integral
 #define Ki 0.0f
 
-
 float PI = 3.14159265358979323846f;
-float GyroMeasError = PI * (60.0f / 180.0f);     // gyroscope measurement error in rads/s (start at 60 deg/s), then reduce after ~10 s to 3
-float beta = sqrt(3.0f / 4.0f) * GyroMeasError;  // compute beta
+volatile float beta = 0.0f;  // compute beta
 
 volatile float q0 = 1.0f, q1 = 0.0f, q2 = 0.0f, q3 = 0.0f;	// quaternion of sensor frame relative to auxiliary frame
 float eInt[3] = {0.0f, 0.0f, 0.0f};              // vector to hold integral error for Mahony method
-
-float magCalibration[3] = {0, 0, 0}, magbias[3] = {0, 0, 0};  // Factory mag calibration and mag bias
-float gyroBias[3] = {0, 0, 0}, accelBias[3] = {0, 0, 0}; // Bias corrections for gyro and accelerometer
-
+float gyroBias[3] = {0, 0, 0}, accelBias[3] = {0, 0, 0}, magBias[3] = {0, 0, 0}; // Bias corrections for gyro and accelerometer
+float magScale[3] = {0, 0, 0};
 float invSqrt(float x);
-static float calcXValueG( uint8 data[] );
-static float calcYValueG( uint8 data[] );
-static float calcZValueG( uint8 data[] );
-static float calcXValueA( uint8 data[] );
-static float calcYValueA( uint8 data[] );
-static float calcZValueA( uint8 data[] );
-static float calcXValueM( uint8 data[] );
-static float calcYValueM( uint8 data[] );
-static float calcZValueM( uint8 data[] );
+
 void MahonyQuaternionUpdate(float gx, float gy, float gz, float ax, float ay, float az, float mx, float my, float mz);
 void MadgwickQuaternionUpdate(float gx, float gy, float gz, float ax, float ay, float az, float mx, float my, float mz);
 void updateQuatData( void );
@@ -79,33 +66,36 @@ static float calcZValueA( uint8 data[] )
 }
 
 
-static float calcXValueM( uint8 data[] )
+float calcXValueM( uint8 data[] )
 {
 	int16 rawM = (data[0] & 0xff) | ((data[1] << 8) & 0xff00) * -1;
+	float lastX = ((float)rawM * 1.0) * 10.0*4912.0/32760.0 * magScale[0];
 	// return ((float)rawM) * 10.0*4912.0/8190.0;
     // //Orientation of sensor on board means we need to swap X (multiplying with -1)
     // int16 rawX = (data[0] & 0xff) | ((data[1] << 8) & 0xff00);
-    // float lastX = (((float)rawX * 1.0) / ( 65536 / 2000.0 )) * -1;
+    // float lastX = (((float)rawM * 1.0) / ( 65536 / 2000.0 ));
     // return lastX;
-	return rawM;
+	return lastX;
 }
-static float calcYValueM( uint8 data[] )
+float calcYValueM( uint8 data[] )
 {
     // //Orientation of sensor on board means we need to swap Y (multiplying with -1)
     int16 rawM = ((data[2] & 0xff) | ((data[3] << 8) & 0xff00)) * -1;
-    // float lastY = (((float)rawY * 1.0) / ( 65536 / 2000.0 )) * -1;
+	float lastY = ((float)rawM * 1.0) * 10.0*4912.0/32760.0 * magScale[1];
+    // float lastY = (((float)rawM * 1.0) / ( 65536 / 2000.0 )) ;
 	// int16 rawM = (data[2] & 0xff) | ((data[3] << 8) & 0xff00) * -1;
     // return ((float)rawM) * 10.0*4912.0/8190.0;
-	return rawM;
+	return lastY;
 }
-static float calcZValueM( uint8 data[] )
+float calcZValueM( uint8 data[] )
 {
     int16 rawM = (data[4] & 0xff) | ((data[5] << 8) & 0xff00);
-    // float lastZ =  ((float)rawZ * 1.0) / ( 65536 / 2000.0 );
+	float lastZ =  ((float)rawM * 1.0) * 10.0*4912.0/32760.0 * magScale[2];
+    // float lastZ =  ((float)rawM * 1.0) / ( 65536 / 2000.0 );
     // return lastZ;
 	// int16 rawM = (data[4] & 0xff) | ((data[5] << 8) & 0xff00);
 	// return ((float)rawM) * 10.0*4912.0/8190.0;
-	return rawM;
+	return lastZ;
 }
 
 union Data
@@ -118,7 +108,7 @@ void updateQuatData( void )
 {
   	union Data qq0,qq1,qq2,qq3;
 	qq0.f=q0;
-	qq0.f=q0;
+	qq1.f=q1;
 	qq2.f=q2;
 	qq3.f=q3;
 	uint8 qData[QUAT_DATA_LEN];
@@ -128,10 +118,10 @@ void updateQuatData( void )
 	qData[2]=qq0.u[2];
 	qData[3]=qq0.u[3]; 
 
-	qData[4]=qq0.u[0];
-	qData[5]=qq0.u[1];
-	qData[6]=qq0.u[2];
-	qData[7]=qq0.u[3]; 
+	qData[4]=qq1.u[0];
+	qData[5]=qq1.u[1];
+	qData[6]=qq1.u[2];
+	qData[7]=qq1.u[3];
 
 	qData[8]=qq2.u[0];
 	qData[9]=qq2.u[1];
@@ -144,116 +134,34 @@ void updateQuatData( void )
 	qData[15]=qq3.u[3];
 	qData[16]=0;
 	qData[17]=0;
-	// qData[0]=0;
-	// qData[1]=1;
-	// qData[2]=2;
-	// qData[3]=3;
-
-	// qData[4]=0;
-	// qData[5]=1;
-	// qData[6]=2;
-	// qData[7]=3;
-
-	// qData[8]=0;
-	// qData[9]=1;
-	// qData[10]=2;
-	// qData[11]=3;
-
-	// qData[12]=0;
-	// qData[13]=1;
-	// qData[14]=2;
-	// qData[15]=3;
 
     Quat_setParameter( SENSOR_DATA, QUAT_DATA_LEN, qData);
 }
 
-// void updateQuatData( void )
-// {
-//   	// union Data qq0,qq0,qq2,qq3;
-// 	// qq0.f=0.1;
-// 	// qq0.f=0.2;
-// 	// qq2.f=0.3;
-// 	// qq3.f=0.4;
-// 	uint8 qData[18];
-
-// 	// qData[0]=qq0.u[0];
-// 	// qData[1]=qq0.u[1];
-// 	// qData[2]=qq0.u[2];
-// 	// qData[3]=qq0.u[3];
-
-// 	// qData[4]=qq0.u[0];
-// 	// qData[5]=qq0.u[1];
-// 	// qData[6]=qq0.u[2];
-// 	// qData[7]=qq0.u[3];
-
-// 	// qData[8]=qq2.u[0];
-// 	// qData[9]=qq2.u[1];
-// 	// qData[10]=qq2.u[2];
-// 	// qData[11]=qq2.u[3];
-
-// 	// qData[12]=qq3.u[0];
-// 	// qData[13]=qq3.u[1];
-// 	// qData[14]=qq3.u[2];
-// 	// qData[15]=qq3.u[3];
-// 	qData[0]=0;
-// 	qData[1]=1;
-// 	qData[2]=2;
-// 	qData[3]=3;
-
-// 	qData[4]=0;
-// 	qData[5]=1;
-// 	qData[6]=2;
-// 	qData[7]=3;
-
-// 	qData[8]=0;
-// 	qData[9]=1;
-// 	qData[10]=2;
-// 	qData[11]=3;
-
-// 	qData[12]=0;
-// 	qData[13]=1;
-// 	qData[14]=2;
-// 	qData[15]=3;
-// 	qData[16]=2;
-// 	qData[17]=3;
-
-//     Quat_setParameter( SENSOR_DATA, QUAT_DATA_LEN, qData);
-// }
-
 
 void readQuatData( uint8 data[18] )
 {
-  float PI = 3.14159265358979323846f;
-  uint8 aData[6];
-  uint8 mData[6];
-  uint8 gData[6];
+	uint8 aData[6];
+	uint8 mData[6];
+	uint8 gData[6];
 
-  for (int i = 0; i < 6; i++) {
-      gData[i] = data[0 + i];
-      aData[i] = data[6 + i];
-      mData[i] = data[12 + i];
-  }
-	// float gx=gData[0];
-	// float gy=gData[1];
-	// float gz=gData[2];
-	// float ax=aData[0];
-	// float ay=aData[1];
-	// float az=aData[2];
-	// float mx=mData[0];
-	// float my=mData[1];
-	// float mz=mData[2];
+	for (int i = 0; i < 6; i++) {
+		gData[i] = data[0 + i];
+		aData[i] = data[6 + i];
+		mData[i] = data[12 + i];
+	}
+
+	getMagScale(&magScale);
 	float gx=calcXValueG(gData) - gyroBias[0];
-	float gy=calcYValueG(gData);
-	float gz=calcZValueG(gData);
-	float ax=calcXValueA(aData);
-	float ay=calcYValueA(aData);
-	float az=calcZValueA(aData);
-	float mx=calcXValueM(mData);
-	float my=calcYValueM(mData);
-	float mz=calcZValueM(mData);
-	// float mx=calcXValueM(mData);
-	// float my=calcYValueM(mData);
-	// float mz=calcZValueM(mData);
+	float gy=calcYValueG(gData) - gyroBias[1];
+	float gz=calcZValueG(gData) - gyroBias[2];
+	float ax=calcXValueA(aData) - accelBias[0];
+	float ay=calcYValueA(aData) - accelBias[1];
+	float az=calcZValueA(aData) - accelBias[2];
+	float mx=calcXValueM(mData) - magBias[0];
+	float my=calcYValueM(mData) - magBias[1];
+	float mz=calcZValueM(mData) - magBias[2];
+	// MahonyQuaternionUpdate(gx*PI/180.0f, gy*PI/180.0f, gz*PI/180.0f, ax, ay, az, mx, my, mz);
 	MadgwickQuaternionUpdate(gx*PI/180.0f, gy*PI/180.0f, gz*PI/180.0f, ax, ay, az, mx, my, mz);
 }
 
@@ -265,7 +173,6 @@ void readQuatData( uint8 data[18] )
 // but is much less computationally intensive---it can be performed on a 3.3 V Pro Mini operating at 8 MHz!
 void MadgwickQuaternionUpdate(float gx, float gy, float gz, float ax, float ay, float az, float mx, float my, float mz)
 {
-	mz = -mz;
 	float norm;
 	float hx, hy, _2bx, _2bz;
 	float s1, s2, s3, s4;
@@ -295,6 +202,8 @@ void MadgwickQuaternionUpdate(float gx, float gy, float gz, float ax, float ay, 
 	float q2q3 = q2 * q3;
 	float q3q3 = q3 * q3;
 
+	// float beta = sqrt(3.0f / 4.0f) * 3.14159265358979323846f * (60.0f / 180.0f);
+	beta = 0.08f;
 	// Normalise accelerometer measurement
 	norm = sqrt(ax * ax + ay * ay + az * az);
 	if (norm == 0.0f) return; // handle NaN
@@ -361,7 +270,6 @@ void MadgwickQuaternionUpdate(float gx, float gy, float gz, float ax, float ay, 
  // measured ones. 
 void MahonyQuaternionUpdate(float gx, float gy, float gz, float ax, float ay, float az, float mx, float my, float mz)
 {
-	mz = -mz;
 	float norm;
 	float hx, hy, bx, bz;
 	float vx, vy, vz, wx, wy, wz;
@@ -465,35 +373,6 @@ float invSqrt(float x) {
 	return y;
 }
 
-void writeByte(uint8_t address, uint8_t subAddress, uint8_t data)
-{
-   char data_write[2];
-   data_write[0] = subAddress;
-   data_write[1] = data;
-   SensorI2C_writeReg(address, data_write, 2, 0);
-}
-
-char readByte(uint8_t address, uint8_t subAddress)
-{
-    char data[1]; // `data` will store the register data     
-    char data_write[1];
-    data_write[0] = subAddress;
-    i2c.write(address, data_write, 1, 1); // no stop
-    i2c.read(address, data, 1, 0); 
-    return data[0]; 
-}
-
-void readBytes(uint8_t address, uint8_t subAddress, uint8_t count, uint8_t * dest)
-{     
-    char data[14];
-    char data_write[1];
-    data_write[0] = subAddress;
-    i2c.write(address, data_write, 1, 1); // no stop
-    i2c.read(address, data, count, 0); 
-    for(int ii = 0; ii < count; ii++) {
-     dest[ii] = data[ii];
-    }
-}
 
 
 

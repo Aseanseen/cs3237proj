@@ -56,11 +56,11 @@
 
 #include "gatt.h"
 #include "gattservapp.h"
-
+#include "SensorMpu9250_Q.h"
 #include "board.h"
 #include "quatservice.h"
-#include "sensortag_mov.h"
-#include "SensorMpu9250.h"
+#include "sensortag_quat.h"
+
 #include "SensorTagTest.h"
 #include "SensorUtil.h"
 #include "util.h"
@@ -163,7 +163,6 @@ static sensorCBs_t sensorCallbacks =
   sensorChangeCB,  // Characteristic value change callback
 };
 
-
 /*********************************************************************
  * PUBLIC FUNCTIONS
  */
@@ -194,7 +193,8 @@ void SensorTagQuat_init(void)
   nMotions = 0;
 
   SensorMpu9250_reset();
-  calibrateMPU9250(gyroBias, accelBias);
+//  SensorMPU9250_calibrate_all(gyroBias, accelBias);
+  SensorMPU9250_calibrate_GyroAcc(gyroBias, accelBias);
   if (SensorMpu9250_init())
   {
     SensorTagQuat_reset();
