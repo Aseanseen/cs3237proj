@@ -59,9 +59,6 @@ def fill_with_1_year_1_user(user):
         t1 = {
             'name': user,
             'timecollect': datetime.datetime.timestamp(obj), 
-            'acc_x_neck': 0.333, 
-            'acc_y_neck': 0.345, 
-            'acc_z_neck': 0.567, 
             "classification": classification
         }
         requests.put(url_add_data, params=t1)
@@ -85,9 +82,6 @@ def fill_with_1_month_1_user(user):
         t1 = {
             'name': user,
             'timecollect': datetime.datetime.timestamp(obj), 
-            'acc_x_neck': 0.333, 
-            'acc_y_neck': 0.345, 
-            'acc_z_neck': 0.567, 
             "classification": classification
         }
         requests.put(url_add_data, params=t1)
@@ -111,9 +105,6 @@ def fill_with_1_month_2_user(user1, user2):
         t1 = {
             'name': user1,
             'timecollect': datetime.datetime.timestamp(obj), 
-            'acc_x_neck': 0.333, 
-            'acc_y_neck': 0.345, 
-            'acc_z_neck': 0.567, 
             "classification": classification
         }
         requests.put(url_add_data, params=t1)
@@ -137,9 +128,6 @@ def fill_with_1_month_2_user(user1, user2):
         t2 = {
             'name': user2,
             'timecollect': datetime.datetime.timestamp(obj), 
-            'acc_x_neck': 0.333, 
-            'acc_y_neck': 0.345, 
-            'acc_z_neck': 0.567, 
             "classification": classification
         }
         requests.put(url_add_data, params=t2)

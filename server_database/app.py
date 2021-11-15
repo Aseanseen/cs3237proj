@@ -24,8 +24,8 @@ from commons.commons import (
 app = Flask(__name__)
 
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///User.sqlite3'
-# app.config['SQLALCHEMY_DATABASE_URI'] = 'postgres://twzrkawqgsbszj:bbea1188c97217884a56f6eb3f5a53da5010937789bacb879619a5b3f1e9e645@ec2-3-225-30-189.compute-1.amazonaws.com:5432/d46843sjl1lg0l'
+# app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///User.sqlite3'
+app.config['SQLALCHEMY_DATABASE_URI'] = 'postgres://twzrkawqgsbszj:bbea1188c97217884a56f6eb3f5a53da5010937789bacb879619a5b3f1e9e645@ec2-3-225-30-189.compute-1.amazonaws.com:5432/d46843sjl1lg0l'
 
 db = SQLAlchemy(app)
 
@@ -37,19 +37,13 @@ class User(db.Model):
 	_id = db.Column(db.Integer, primary_key=True, autoincrement=True)
 	name = db.Column(db.String(100))
 	timecollect = db.Column(db.Integer)
-	acc_x_neck = db.Column(db.Float(), nullable=False)
-	acc_y_neck = db.Column(db.Float(), nullable=False)
-	acc_z_neck = db.Column(db.Float(), nullable=False)
 	classification = db.Column(db.Integer)
 
 
 	# A constructor function where we will pass the name and email of a user and it gets add as a new entry in the table.
-	def __init__(self, name, timecollect, acc_x_neck, acc_y_neck, acc_z_neck, classification):
+	def __init__(self, name, timecollect, classification):
 		self.name = name
 		self.timecollect = timecollect
-		self.acc_x_neck = acc_x_neck
-		self.acc_y_neck = acc_y_neck
-		self.acc_z_neck = acc_z_neck
 		self.classification = classification
 		
 
@@ -68,11 +62,8 @@ def add_data():
 		#data = request.args.get # request the data from the form in index.html file
 		name = request.args.get("name")
 		timecollect = int(float(request.args.get("timecollect")))
-		acc_x_neck = float(request.args.get("acc_x_neck"))
-		acc_y_neck = float(request.args.get("acc_y_neck"))
-		acc_z_neck = float(request.args.get("acc_z_neck"))
 		classification = float(request.args.get("classification"))
-		new_data = User(name, timecollect, acc_x_neck, acc_y_neck, acc_z_neck, classification)
+		new_data = User(name, timecollect, classification)
 		db.session.add(new_data)
 		db.session.commit()
 
