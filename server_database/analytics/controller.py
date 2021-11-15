@@ -99,3 +99,24 @@ def get_advice(sum_dict):
             advice += "[%s] : You were in this posture %.3f percent of the time!\n" % (classes[i], (value[i]/sum(value)))
         res_dict[key] = advice
     return res_dict
+
+'''
+Given a dict where keys are the dates and values are the count of the types of postures in that day
+Get the all time average for each posture
+Returns a dict
+
+Note: The dict passed in must have values where the classifation is in the same sequence as in CLASSIFICATIONS
+'''
+def get_ave(sum_dict):
+    res_dict = {}
+    sum_of_posture_percentage = [0 for classification in CLASSIFICATIONS]
+    classes = [CLASSIFICATION_ENUM_TO_NAME[classification] for classification in CLASSIFICATIONS]
+    # Iterate through days
+    for key, value in sum_dict.items():
+        # For every day, iterate through the postures
+        for i in range(len(classes)):
+            sum_of_posture_percentage[i] += (value[i] / sum(value))
+    # Find the overall average percentage
+    for i in range(len(classes)):
+        res_dict[classes[i]] = sum_of_posture_percentage[i] / len(sum_dict)
+    return res_dict

@@ -7,7 +7,8 @@ from analytics.controller import (
 	get_plot,
 	get_advice,
 	get_stack_bar_plot,
-	STACK_BAR_PLOT_PATH
+	STACK_BAR_PLOT_PATH,
+	get_ave
 )
 from utils.utils import get_base64string_from_img_path
 
@@ -24,9 +25,9 @@ app = Flask(__name__)
 
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///User.sqlite3'
-# app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///User.sqlite3'
 	
 db = SQLAlchemy(app)
+
 class User(db.Model):
 	# Defines the Table Name user
 	__tablename__ = "user"
@@ -56,12 +57,16 @@ class User(db.Model):
 def home():
 	return render_template("demo3237.html", user_data = User.query.all())
 
+'''
+Given a name, timestamp, sensor data, classification
+Add that entry into the database
+'''
 @app.route('/add_data', methods = ["GET", "POST", "PUT"]) 
 def add_data():
-	if request.method == 'PUT': # When a user clicks submit button it will come here.
+	if request.method == 'PUT':
 		#data = request.args.get # request the data from the form in index.html file
 		name = request.args.get("name")
-		timecollect = int(request.args.get("timecollect"))
+		timecollect = int(float(request.args.get("timecollect")))
 		acc_x_neck = float(request.args.get("acc_x_neck"))
 		acc_y_neck = float(request.args.get("acc_y_neck"))
 		acc_z_neck = float(request.args.get("acc_z_neck"))
@@ -75,9 +80,14 @@ def add_data():
 
 	return render_template("demo3237.html", user_data = User.query.all())
 
+'''
+Given a start timestamp, end timestamp, name
+Give the stack bar plot of the date and the count of bad posture
+Give the percentage of time in each posture
+'''
 @app.route('/get_data', methods = ["GET"]) 
 def get_data():
-	if request.method == 'GET': # When a user clicks submit button it will come here.
+	if request.method == 'GET':
 		start_time = int(request.args.get("start_time"))
 		end_time = int(request.args.get("end_time"))
 		name = str(request.args.get("name"))
@@ -96,10 +106,10 @@ def get_data():
 		print(entries_to_analyse)
 		
 		list_of_datetime = [datetime.datetime.fromtimestamp(user.timecollect) for user in entries_to_analyse]
-		list_of_datetime_str = [datetime.strftime("%m/%d/%Y, %H:%M:%S") for datetime in list_of_datetime]
+		# list_of_datetime_str = [datetime.strftime("%m/%d/%Y, %H:%M:%S") for datetime in list_of_datetime]
 		list_of_classifications = [user.classification for user in entries_to_analyse]
-
 		list_of_dates = [datetime.strftime("%m/%d/%Y") for datetime in list_of_datetime]
+
 		result = {}
 
 		# Creates a dictionary where key is date and values is a list of the classification in that date
@@ -125,23 +135,71 @@ def get_data():
 			"advice" : advice
 		}
 		print(payload)
-	return payload, 200
+	return payload
 
-@app.route('/remove_data_all', methods = ["POST"]) 
-def remove_data_all():
-	if request.method == 'POST': # When a user clicks submit button it will come here.
+
+'''
+Given a name
+Give a per day all time average percentage of each posture
+'''
+@app.route('/get_all_time_ave', methods = ["GET"]) 
+def get_all_time_ave():
+	if request.method == 'GET':
+		name = str(request.args.get("name"))
+
+		# Filter based on given params
+		entries_to_analyse = User.query.\
+			filter(User.name == name).\
+			all()
+
+		# If get is invalid, return empty dictionary
+		if not entries_to_analyse:
+			return {}, 200
+		
+		print(entries_to_analyse)
+		
+		list_of_datetime = [datetime.datetime.fromtimestamp(user.timecollect) for user in entries_to_analyse]
+		# list_of_datetime_str = [datetime.strftime("%m/%d/%Y, %H:%M:%S") for datetime in list_of_datetime]
+		list_of_classifications = [user.classification for user in entries_to_analyse]
+		list_of_dates = [datetime.strftime("%m/%d/%Y") for datetime in list_of_datetime]
+
+		result = {}
+
+		# Creates a dictionary where key is date and values is a list of the classification in that date
+		for date, classification in zip(list_of_dates, list_of_classifications):
+			if date in result:
+				result[date].append(classification)
+			else:
+				result[date] = [classification]
+
+		# Creates a dictionary where key is date and values are count of each classification in that date
+		# Sequence of the count follows the sequence of CLASSIFICATIONS
+		for key in result:
+			result[key] = [result[key].count(classification) for classification in CLASSIFICATIONS]
+
+		payload = get_ave(result)
+
+		print(payload)
+	return payload
+
+'''
+Given a name
+Delete every entry of that name in the database
+'''
+@app.route('/delete_data_all', methods = ["DELETE"]) 
+def delete_data_all():
+	if request.method == 'DELETE':
 		name = request.args.get("name")
 		entries_to_delete = User.query.filter_by(name=name).all()
 		for entry in entries_to_delete:
 			db.session.delete(entry)
 			db.session.commit()
-
-	return "None", 200
+	return "None"
 
 
 @app.route('/get_analytics_data', methods = ["GET"]) 
 def get_analytics_data():
-	if request.method == 'GET': # When a user clicks submit button it will come here.
+	if request.method == 'GET':
 		start_timestamp = str(request.args.get("start_time"))
 		end_timestamp = str(request.args.get("end_time"))
 		
