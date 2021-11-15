@@ -66,6 +66,7 @@
 #include "util.h"
 #include "string.h"
 #include "quat_utils.h"
+#include "sensortag_buzzer.h"
 
 /* XDCtools Header files */
 // #include <xdc/runtime/System.h>
@@ -192,12 +193,15 @@ void SensorTagQuat_init(void)
   appState = APP_STATE_OFF;
   nMotions = 0;
 
-  SensorMpu9250_reset();
-//  SensorMPU9250_calibrate_all(gyroBias, accelBias);
-  SensorMPU9250_calibrate_GyroAcc(gyroBias, accelBias);
+//  SensorMPU9250_calibrate_GyroAcc(gyroBias, accelBias);
   if (SensorMpu9250_init())
   {
     SensorTagQuat_reset();
+    SensorTagBuzzer_open(hGpioPin);
+    SensorTagBuzzer_setFrequency(2000);
+    // SensorMPU9250_calibrate_GyroAcc();
+//    SensorMPU9250_calibrate_Mag();
+    SensorTagBuzzer_close();
     SensorMpu9250_registerCallback(SensorTagQuat_processInterrupt);
   }
 

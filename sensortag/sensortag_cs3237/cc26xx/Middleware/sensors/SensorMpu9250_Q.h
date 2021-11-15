@@ -81,6 +81,12 @@ extern "C" {
 #define MAG_BYPASS_FAIL   0x05
 #define MAG_NO_POWER      0x06
 
+//extern volatile float magCalibration[3];
+//extern volatile float magScale[3];
+//extern volatile float magBias[3];
+extern volatile float magCalX, magCalY, magCalZ, magScaleX, magScaleY, magScaleZ, magBiasX, magBiasY, magBiasZ;
+extern volatile float gyroBiasX, gyroBiasY,gyroBiasZ, accelBiasX, accelBiasY,accelBiasZ; // Bias corrections for gyro and accelerometer
+
 /* ----------------------------------------------------------------------------
  *                                           Typedefs
  * -----------------------------------------------------------------------------
@@ -104,7 +110,8 @@ void SensorMpu9250_enable(uint16_t config);
 bool SensorMpu9250_enableWom(uint8_t threshold);
 uint8_t SensorMpu9250_irqStatus(void);
 
-void SensorMPU9250_calibrate_GyroAcc(float *dest1, float *dest2);
+void SensorMPU9250_calibrate_GyroAcc();
+void SensorMPU9250_calibrate_Mag();
 
 bool SensorMpu9250_accSetRange(uint8_t range);
 uint8_t SensorMpu9250_accReadRange(void);

@@ -237,7 +237,13 @@ static uint8_t val;
 //static uint16_t calX;
 //static uint16_t calY;
 //static uint16_t calZ;
-static float magScale[3] = {0, 0, 0};  // Factory mag calibration and mag bias
+//volatile float magCalibration[3] = {0, 0, 0};  // Factory mag calibration and mag bias
+//volatile float magScale[3] = {0, 0, 0};
+//volatile float magBias[3] = {0, 0, 0};
+
+
+volatile float magCalX = 0, magCalY = 0, magCalZ = 0, magScaleX = 1.0, magScaleY = 1.0, magScaleZ = 1.0, magBiasX = +470., magBiasY = +120., magBiasZ = +125.;
+volatile float gyroBiasX=0, gyroBiasY=0,gyroBiasZ=0, accelBiasX=0, accelBiasY=0,accelBiasZ=0;
 
 // Magnetometer control
 static uint8_t scale = MFS_16BITS;      // 16 bit resolution
@@ -260,11 +266,7 @@ static SensorMpu9250CallbackFn_t isrCallbackFn = NULL;
 /* -----------------------------------------------------------------------------
 *  Public functions
 * ------------------------------------------------------------------------------
-*/
-
-void getMagScale(uint8_t* input) {
-   memcpy(input, &magScale, sizeof(float) * 3);
-}
+*
 
 /*******************************************************************************
 * @fn          SensorMpu9250_powerOn
@@ -887,12 +889,10 @@ static void sensorMagInit(void)
         DELAY_MS(10);
 
         // Get calibration data
-        if (SensorI2C_readReg(MAG_ASAX, &rawData[0], 3))
-        {
-            // Return x-axis sensitivity adjustment values, etc.
-            magScale[0] =  (float)(rawData[0] - 128)/256.0f + 1.0f;
-            magScale[1] =  (float)(rawData[1] - 128)/256.0f + 1.0f;
-            magScale[2] =  (float)(rawData[2] - 128)/256.0f + 1.0f;
+        if (SensorI2C_readReg(MAG_ASAX, &rawData[0], 3)) {
+            magCalX =  (float)(rawData[0] - 128)/256.0f + 1.0f;        // Return x-axis sensitivity adjustment values, etc.
+            magCalY =  (float)(rawData[1] - 128)/256.0f + 1.0f;  
+            magCalZ =  (float)(rawData[2] - 128)/256.0f + 1.0f; 
         }
 
         // Turn off the sensor by doing a reset
@@ -1127,7 +1127,7 @@ static bool _SensorI2C_writeReg(uint8_t addr, uint8_t data) {
 
 // Function which accumulates gyro and accelerometer data after device initialization. It calculates the average
 // of the at-rest readings and then loads the resulting offsets into accelerometer and gyro bias registers.
-void SensorMPU9250_calibrate_GyroAcc(float *dest1, float *dest2) {
+void SensorMPU9250_calibrate_GyroAcc() {
 
     //void SensorMPU9250_calibrate_all(float *dest1, float *dest2) {
     uint8_t data[12]; // data array to hold accelerometer and gyro x, y, z, data
@@ -1137,13 +1137,13 @@ void SensorMPU9250_calibrate_GyroAcc(float *dest1, float *dest2) {
     // reset device, reset all registers, clear gyro and accelerometer bias registers
 
     _SensorI2C_writeReg(PWR_MGMT_1, 0x80); // Write a one to bit 7 reset bit; toggle reset device
-    DELAY_MS(0.1 * 1000);
+    DELAY_MS(100);
 
     // get stable time source
     // Set clock source to be PLL with x-axis gyroscope reference, bits 2:0 = 001
     _SensorI2C_writeReg(PWR_MGMT_1, 0x01);
     _SensorI2C_writeReg(PWR_MGMT_2, 0x00);
-    DELAY_MS(0.2 * 1000);
+    DELAY_MS(200);
 
     // Configure device for bias calculation
     _SensorI2C_writeReg(INT_ENABLE, 0x00);   // Disable all interrupts
@@ -1152,7 +1152,7 @@ void SensorMPU9250_calibrate_GyroAcc(float *dest1, float *dest2) {
     _SensorI2C_writeReg(I2C_MST_CTRL, 0x00); // Disable I2C master
     _SensorI2C_writeReg(USER_CTRL, 0x00);    // Disable FIFO and I2C master modes
     _SensorI2C_writeReg(USER_CTRL, 0x0C);    // Reset FIFO and DMP
-    DELAY_MS(0.015 * 1000);
+    DELAY_MS(15);
 
     // Configure MPU9250 gyro and accelerometer for bias calculation
     _SensorI2C_writeReg(CONFIG, 0x01);      // Set low-pass filter to 188 Hz
@@ -1163,10 +1163,11 @@ void SensorMPU9250_calibrate_GyroAcc(float *dest1, float *dest2) {
     uint16_t  gyrosensitivity  = 131;   // = 131 LSB/degrees/sec
     uint16_t  accelsensitivity = 16384;  // = 16384 LSB/g
 
+
     // Configure FIFO to capture accelerometer and gyro data for bias calculation
     _SensorI2C_writeReg(USER_CTRL, 0x40);   // Enable FIFO
     _SensorI2C_writeReg(FIFO_EN, 0x78);     // Enable gyro and accelerometer sensors for FIFO (max size 512 bytes in MPU-9250)
-    DELAY_MS(0.04 * 1000); // accumulate 40 samples in 80 milliseconds = 480 bytes
+    DELAY_MS(40); // accumulate 40 samples in 80 milliseconds = 480 bytes
 
     // At end of sample accumulation, turn off FIFO sensor read
     _SensorI2C_writeReg(FIFO_EN, 0x00);        // Disable gyro and accelerometer sensors for FIFO
@@ -1218,9 +1219,9 @@ void SensorMPU9250_calibrate_GyroAcc(float *dest1, float *dest2) {
     _SensorI2C_writeReg(ZG_OFFSET_H, data[4]);
     _SensorI2C_writeReg(ZG_OFFSET_L, data[5]);
 
-    dest1[0] = (float) gyro_bias[0]/(float) gyrosensitivity; // construct gyro bias in deg/s for later manual subtraction
-    dest1[1] = (float) gyro_bias[1]/(float) gyrosensitivity;
-    dest1[2] = (float) gyro_bias[2]/(float) gyrosensitivity;
+    gyroBiasX = (float) gyro_bias[0]/(float) gyrosensitivity; // construct gyro bias in deg/s for later manual subtraction
+    gyroBiasY = (float) gyro_bias[1]/(float) gyrosensitivity;
+    gyroBiasZ = (float) gyro_bias[2]/(float) gyrosensitivity;
 
     // Construct the accelerometer biases for push to the hardware accelerometer bias registers. These registers contain
     // factory trim values which must be added to the calculated accelerometer biases; on boot up these registers will hold
@@ -1268,62 +1269,54 @@ void SensorMPU9250_calibrate_GyroAcc(float *dest1, float *dest2) {
     _SensorI2C_writeReg(ZA_OFFSET_H, data[4]);
     _SensorI2C_writeReg(ZA_OFFSET_L, data[5]);
     // Output scaled accelerometer biases for manual subtraction in the main program
-    dest2[0] = (float)accel_bias[0]/(float)accelsensitivity;
-    dest2[1] = (float)accel_bias[1]/(float)accelsensitivity;
-    dest2[2] = (float)accel_bias[2]/(float)accelsensitivity;
+    accelBiasX = (float)accel_bias[0]/(float)accelsensitivity;
+    accelBiasY = (float)accel_bias[1]/(float)accelsensitivity;
+    accelBiasZ = (float)accel_bias[2]/(float)accelsensitivity;
 }
 
-//void SensorMPU9250_calibrate_all(float *dest1, float *dest2) {
-//    SensorMPU9250_calibrate_GyroAcc(dest1, dest2);
-////    SensorMPU9250_calibrate_Mag(dest3, magScale);
-//    return;
-//}
-//
-//static void SensorMPU9250_calibrate_Mag(float * dest1, float* dest2)
-// {
-//    uint16_t ii = 0, sample_count = 0;
-//    int32_t mag_bias[3] = {0, 0, 0}, mag_scale[3] = {0, 0, 0};
-//    int16_t mag_max[3] = {-32767, -32767, -32767}, mag_min[3] = {32767, 32767, 32767}, mag_temp[3] = {0, 0, 0};
-//
-//    DELAY_MS(4000);
-//
-//    // shoot for ~fifteen seconds of mag data
-//    if(mode == 0x02) sample_count = 128;  // at 8 Hz ODR, new mag data is available every 125 ms
-//    if(mode == 0x06) sample_count = 1500;  // at 100 Hz ODR, new mag data is available every 10 ms
-//    for(ii = 0; ii < sample_count; ii++) {
-//
-//        SensorMpu9250_magRead(mag_temp);  // Read the mag data
-//        for (int jj = 0; jj < 3; jj++) {
-//            mag_temp[jj] = ((mag_temp[jj] - (int16_t)1.0) << 8)/magScale[jj];
-//            if(mag_temp[jj] > mag_max[jj]) mag_max[jj] = mag_temp[jj];
-//            if(mag_temp[jj] < mag_min[jj]) mag_min[jj] = mag_temp[jj];
-//        }
-//        if(mode == 0x02) DELAY_MS(135);  // at 8 Hz ODR, new mag data is available every 125 ms
-//        if(mode == 0x06) DELAY_MS(12);  // at 100 Hz ODR, new mag data is available every 10 ms
-//    }
-//
-//
-//    // Get hard iron correction
-//    mag_bias[0]  = (mag_max[0] + mag_min[0])/2;  // get average x mag bias in counts
-//    mag_bias[1]  = (mag_max[1] + mag_min[1])/2;  // get average y mag bias in counts
-//    mag_bias[2]  = (mag_max[2] + mag_min[2])/2;  // get average z mag bias in counts
-//
-//    dest1[0] = (float) mag_bias[0]*16*mag_scale[0] ;  // save mag biases in G for main program
-//    dest1[1] = (float) mag_bias[1]*16*mag_scale[1];
-//    dest1[2] = (float) mag_bias[2]*16*mag_scale[2];
-//
-//    // Get soft iron correction estimate
-//    mag_scale[0]  = (mag_max[0] - mag_min[0])/2;  // get average x axis max chord length in counts
-//    mag_scale[1]  = (mag_max[1] - mag_min[1])/2;  // get average y axis max chord length in counts
-//    mag_scale[2]  = (mag_max[2] - mag_min[2])/2;  // get average z axis max chord length in counts
-//
-//    float avg_rad = mag_scale[0] + mag_scale[1] + mag_scale[2];
-//    avg_rad /= 3.0;
-//
-//    dest2[0] = avg_rad/((float)mag_scale[0]);
-//    dest2[1] = avg_rad/((float)mag_scale[1]);
-//    dest2[2] = avg_rad/((float)mag_scale[2]);
-// }
+void SensorMPU9250_calibrate_Mag()
+{
+    uint16_t ii = 0, sample_count = 0;
+    int32_t mag_bias[3] = {0, 0, 0}, mag_scale[3] = {0, 0, 0};
+    int16_t mag_max[3] = {-32767, -32767, -32767}, mag_min[3] = {32767, 32767, 32767}, mag_temp[3] = {0, 0, 0};
+    float _mRes = 10.0*4912.0/32760.0;
+    DELAY_MS(4000);
+    
+    // shoot for ~fifteen seconds of mag data
+    if(mode == 0x02) sample_count = 128;  // at 8 Hz ODR, new mag data is available every 125 ms
+    if(mode == 0x06) sample_count = 1500;  // at 100 Hz ODR, new mag data is available every 10 ms
+    for(ii = 0; ii < sample_count; ii++) {
+        SensorMpu9250_magRead(&mag_temp[0]);
+        for (int jj = 0; jj < 3; jj++) {
+            if(mag_temp[jj] > mag_max[jj]) mag_max[jj] = mag_temp[jj];
+            if(mag_temp[jj] < mag_min[jj]) mag_min[jj] = mag_temp[jj];
+        }
+        if(mode == 0x02) DELAY_MS(135);  // at 8 Hz ODR, new mag data is available every 125 ms
+        if(mode == 0x06) DELAY_MS(12);  // at 100 Hz ODR, new mag data is available every 10 ms
+    }
 
-// Gyro, Acc, Magbias, magscale
+    // Get hard iron correction
+    mag_bias[0]  = (mag_max[0] + mag_min[0])/2;  // get average x mag bias in counts
+    mag_bias[1]  = (mag_max[1] + mag_min[1])/2;  // get average y mag bias in counts
+    mag_bias[2]  = (mag_max[2] + mag_min[2])/2;  // get average z mag bias in counts
+    
+    magBiasX = (float) mag_bias[0]*_mRes*magCalX;  // save mag biases in G for main program
+    magBiasY = (float) mag_bias[1]*_mRes*magCalY;   
+    magBiasZ = (float) mag_bias[2]*_mRes*magCalZ;  
+    
+    // Get soft iron correction estimate
+    mag_scale[0]  = (mag_max[0] - mag_min[0])/2;  // get average x axis max chord length in counts
+    mag_scale[1]  = (mag_max[1] - mag_min[1])/2;  // get average y axis max chord length in counts
+    mag_scale[2]  = (mag_max[2] - mag_min[2])/2;  // get average z axis max chord length in counts
+
+    float avg_rad = mag_scale[0] + mag_scale[1] + mag_scale[2];
+    avg_rad /= 3.0;
+
+    magScaleX = avg_rad/((float)mag_scale[0]);
+    magScaleY = avg_rad/((float)mag_scale[1]);
+    magScaleZ = avg_rad/((float)mag_scale[2]);
+    
+}
+
+
 

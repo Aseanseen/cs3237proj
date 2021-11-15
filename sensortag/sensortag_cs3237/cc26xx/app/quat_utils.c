@@ -9,12 +9,11 @@
 #define Ki 0.0f
 
 float PI = 3.14159265358979323846f;
-volatile float beta = 0.0f;  // compute beta
 
 volatile float q0 = 1.0f, q1 = 0.0f, q2 = 0.0f, q3 = 0.0f;	// quaternion of sensor frame relative to auxiliary frame
 float eInt[3] = {0.0f, 0.0f, 0.0f};              // vector to hold integral error for Mahony method
-float gyroBias[3] = {0, 0, 0}, accelBias[3] = {0, 0, 0}, magBias[3] = {0, 0, 0}; // Bias corrections for gyro and accelerometer
-float magScale[3] = {0, 0, 0};
+// extern float gyroBiasX=0, gyroBiasY=0,gyroBiasZ=0, accelBiasX=0, accelBiasY=0,accelBiasZ=0;
+
 float invSqrt(float x);
 
 void MahonyQuaternionUpdate(float gx, float gy, float gz, float ax, float ay, float az, float mx, float my, float mz);
@@ -69,7 +68,7 @@ static float calcZValueA( uint8 data[] )
 float calcXValueM( uint8 data[] )
 {
 	int16 rawM = (data[0] & 0xff) | ((data[1] << 8) & 0xff00) * -1;
-	float lastX = ((float)rawM * 1.0) * 10.0*4912.0/32760.0 * magScale[0];
+	float lastX = ((float)rawM * 1.0) * 10.0*4912.0/32760.0 * magCalX;
 	// return ((float)rawM) * 10.0*4912.0/8190.0;
     // //Orientation of sensor on board means we need to swap X (multiplying with -1)
     // int16 rawX = (data[0] & 0xff) | ((data[1] << 8) & 0xff00);
@@ -81,7 +80,7 @@ float calcYValueM( uint8 data[] )
 {
     // //Orientation of sensor on board means we need to swap Y (multiplying with -1)
     int16 rawM = ((data[2] & 0xff) | ((data[3] << 8) & 0xff00)) * -1;
-	float lastY = ((float)rawM * 1.0) * 10.0*4912.0/32760.0 * magScale[1];
+	float lastY = ((float)rawM * 1.0) * 10.0*4912.0/32760.0 * magCalY;
     // float lastY = (((float)rawM * 1.0) / ( 65536 / 2000.0 )) ;
 	// int16 rawM = (data[2] & 0xff) | ((data[3] << 8) & 0xff00) * -1;
     // return ((float)rawM) * 10.0*4912.0/8190.0;
@@ -90,7 +89,7 @@ float calcYValueM( uint8 data[] )
 float calcZValueM( uint8 data[] )
 {
     int16 rawM = (data[4] & 0xff) | ((data[5] << 8) & 0xff00);
-	float lastZ =  ((float)rawM * 1.0) * 10.0*4912.0/32760.0 * magScale[2];
+	float lastZ =  ((float)rawM * 1.0) * 10.0*4912.0/32760.0 * magCalZ;
     // float lastZ =  ((float)rawM * 1.0) / ( 65536 / 2000.0 );
     // return lastZ;
 	// int16 rawM = (data[4] & 0xff) | ((data[5] << 8) & 0xff00);
@@ -111,6 +110,15 @@ void updateQuatData( void )
 	qq1.f=q1;
 	qq2.f=q2;
 	qq3.f=q3;
+	// qq0.f = magScaleX;
+	// qq1.f = magScaleY;
+	// qq2.f = magScaleZ;
+	// qq3.f = magBiasX;
+	// qq0.f = 1.0;
+	// qq1.f = 2.0;
+	// qq2.f = 3.0;
+	// qq3.f = 4.0;
+	  
 	uint8 qData[QUAT_DATA_LEN];
 
 	qData[0]=qq0.u[0];
@@ -135,7 +143,41 @@ void updateQuatData( void )
 	qData[16]=0;
 	qData[17]=0;
 
-    Quat_setParameter( SENSOR_DATA, QUAT_DATA_LEN, qData);
+	Quat_setParameter( SENSOR_DATA, QUAT_DATA_LEN, qData);
+	// //repeat
+	// qq0.f = magBiasY;
+	// qq1.f = magBiasZ;
+	// qq2.f = accelBiasY;
+	// qq3.f = accelBiasZ;
+	// // qq0.f = 5.0;
+	// // qq1.f = 6.0;
+	// // qq2.f = 7.0;
+	// // qq3.f = 8.0;
+	  
+	// qData[0]=qq0.u[0];
+	// qData[1]=qq0.u[1];
+	// qData[2]=qq0.u[2];
+	// qData[3]=qq0.u[3]; 
+
+	// qData[4]=qq1.u[0];
+	// qData[5]=qq1.u[1];
+	// qData[6]=qq1.u[2];
+	// qData[7]=qq1.u[3];
+
+	// qData[8]=qq2.u[0];
+	// qData[9]=qq2.u[1];
+	// qData[10]=qq2.u[2];
+	// qData[11]=qq2.u[3]; 
+
+	// qData[12]=qq3.u[0];
+	// qData[13]=qq3.u[1];
+	// qData[14]=qq3.u[2];
+	// qData[15]=qq3.u[3];
+	// qData[16]=0;
+	// qData[17]=0;
+
+
+    // Quat_setParameter( SENSOR_DATA, QUAT_DATA_LEN, qData);
 }
 
 
@@ -151,18 +193,18 @@ void readQuatData( uint8 data[18] )
 		mData[i] = data[12 + i];
 	}
 
-	getMagScale(&magScale);
-	float gx=calcXValueG(gData) - gyroBias[0];
-	float gy=calcYValueG(gData) - gyroBias[1];
-	float gz=calcZValueG(gData) - gyroBias[2];
-	float ax=calcXValueA(aData) - accelBias[0];
-	float ay=calcYValueA(aData) - accelBias[1];
-	float az=calcZValueA(aData) - accelBias[2];
-	float mx=calcXValueM(mData) - magBias[0];
-	float my=calcYValueM(mData) - magBias[1];
-	float mz=calcZValueM(mData) - magBias[2];
+	// getMagScale(&magScale);
+	float gx=calcXValueG(gData) - gyroBiasX;
+	float gy=calcYValueG(gData) - gyroBiasY;
+	float gz=calcZValueG(gData) - gyroBiasZ;
+	float ax=calcXValueA(aData) - accelBiasX;
+	float ay=calcYValueA(aData) - accelBiasY;
+	float az=calcZValueA(aData) - accelBiasZ;
+	float mx=(calcXValueM(mData) - magBiasX) * magScaleX;
+	float my=(calcYValueM(mData) - magBiasY) * magScaleY;
+	float mz=(calcZValueM(mData) - magBiasZ) * magScaleZ;
 	// MahonyQuaternionUpdate(gx*PI/180.0f, gy*PI/180.0f, gz*PI/180.0f, ax, ay, az, mx, my, mz);
-	MadgwickQuaternionUpdate(gx*PI/180.0f, gy*PI/180.0f, gz*PI/180.0f, ax, ay, az, mx, my, mz);
+	MadgwickQuaternionUpdate(gx*PI/180.0f, gy*PI/180.0f, gz*PI/180.0f, ax, ay, az, 1,1,1);
 }
 
 // Implementation of Sebastian Madgwick's "...efficient orientation filter for... inertial/magnetic sensor arrays"
@@ -203,7 +245,7 @@ void MadgwickQuaternionUpdate(float gx, float gy, float gz, float ax, float ay, 
 	float q3q3 = q3 * q3;
 
 	// float beta = sqrt(3.0f / 4.0f) * 3.14159265358979323846f * (60.0f / 180.0f);
-	beta = 0.08f;
+	float beta = 0.1f;
 	// Normalise accelerometer measurement
 	norm = sqrt(ax * ax + ay * ay + az * az);
 	if (norm == 0.0f) return; // handle NaN
