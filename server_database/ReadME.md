@@ -68,7 +68,7 @@ Arguments required:
 ### Delete all the data of a given name
 Type of request: `DELETE`
 
-URL: https://demoiot3237.herokuapp.com/delete_data_all
+URL: https://demoiot3237.herokuapp.com/delete_user
 
 Arguments required:
 1. name
@@ -80,3 +80,13 @@ URL: https://demoiot3237.herokuapp.com/clear_db
 
 Arguments required:
 None
+
+## Examples for API
+
+https://demoiot3237.herokuapp.com/add_data?name=Karthig&timecollect=1640303800&classification=0
+
+https://demoiot3237.herokuapp.com/get_data?name=Karthig&start_time=1611370800&end_time=1637621400
+
+https://demoiot3237.herokuapp.com/get_all_time_ave?name=Karthig
+
+https://demoiot3237.herokuapp.com/delete_user?name=Karthig

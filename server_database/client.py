@@ -14,11 +14,12 @@ url = "https://demoiot3237.herokuapp.com"
 url_add_data = url + "/add_data"
 url_get_data = url + "/get_data"
 url_get_all_time_ave = url + "/get_all_time_ave"
-url_delete_data_all = url + "/delete_data_all"
+url_delete_user = url + "/delete_user"
 url_clear_db = url + "/clear_db"
 
 def main():
-    test_get_all_time_ave(TEST_USER_1)
+    fill_with_1_year_1_user(TEST_USER_1)
+    # test_get_all_time_ave(TEST_USER_1)
     # delete_data_all(TEST_USER_1)
     # clear_db()
 
@@ -30,11 +31,11 @@ def test_get_all_time_ave(user):
     }
     requests.get(url_get_all_time_ave, params=dict_to_enter)
 
-def delete_data_all(user):
+def url_delete_user(user):
     dict_to_enter = {
         "name" : user
     }
-    requests.delete(url_delete_data_all, params=dict_to_enter)
+    requests.delete(url_delete_user, params=dict_to_enter)
 
 def clear_db():
     requests.delete(url_clear_db)

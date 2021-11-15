@@ -25,7 +25,7 @@ app = Flask(__name__)
 
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 # app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///User.sqlite3'
-app.config['SQLALCHEMY_DATABASE_URI'] = 'postgres://twzrkawqgsbszj:bbea1188c97217884a56f6eb3f5a53da5010937789bacb879619a5b3f1e9e645@ec2-3-225-30-189.compute-1.amazonaws.com:5432/d46843sjl1lg0l'
+app.config['SQLALCHEMY_DATABASE_URI'] = 'postgres://uxpfjyjuurtbsk:2edc380a682974b81c4c955ef5697a6eef21fdbbbbbdbd8496cbb55ca76a29e0@ec2-52-201-195-11.compute-1.amazonaws.com:5432/da1fogjv37ag59'
 
 db = SQLAlchemy(app)
 
@@ -62,7 +62,7 @@ def add_data():
 		#data = request.args.get # request the data from the form in index.html file
 		name = request.args.get("name")
 		timecollect = int(float(request.args.get("timecollect")))
-		classification = float(request.args.get("classification"))
+		classification = int(float(request.args.get("classification")))
 		new_data = User(name, timecollect, classification)
 		db.session.add(new_data)
 		db.session.commit()
@@ -93,7 +93,7 @@ def get_data():
 
 		# If get is invalid, return empty dictionary
 		if not entries_to_analyse:
-			return {}, 200
+			return {}
 		
 		print(entries_to_analyse)
 		
@@ -146,7 +146,7 @@ def get_all_time_ave():
 
 		# If get is invalid, return empty dictionary
 		if not entries_to_analyse:
-			return {}, 200
+			return {}
 		
 		print(entries_to_analyse)
 		
@@ -178,8 +178,8 @@ def get_all_time_ave():
 Given a name
 Delete every entry of that name in the database
 '''
-@app.route('/delete_data_all', methods = ["DELETE"]) 
-def delete_data_all():
+@app.route('/delete_user', methods = ["DELETE"]) 
+def delete_user():
 	if request.method == 'DELETE':
 		name = request.args.get("name")
 		entries_to_delete = User.query.filter_by(name=name).all()
@@ -199,22 +199,6 @@ def clear_db():
 			db.session.delete(entry)
 			db.session.commit()
 	return "None"
-
-@app.route('/get_analytics_data', methods = ["GET"]) 
-def get_analytics_data():
-	if request.method == 'GET':
-		start_timestamp = str(request.args.get("start_time"))
-		end_timestamp = str(request.args.get("end_time"))
-		
-		
-		#TODO: Comput the result based on start_time and end_times
-		#user_data = User.query.all()
-
-		
-
-		result = {'Straight': 20, 'Lean forward': 20, 'Lean backward': 20, 'Lean right': 20, 'Lean left': 20}
-	return result, 200
-
 
 if __name__=="__main__":
 	db.create_all()
