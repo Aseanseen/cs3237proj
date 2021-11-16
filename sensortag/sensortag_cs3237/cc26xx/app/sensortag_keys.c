@@ -86,7 +86,7 @@
 
 // Key press time-outs (seconds)
 #define POWER_PRESS_PERIOD      3
-#define RESET_PRESS_PERIOD      6
+#define RESET_PRESS_PERIOD      3
 
 // Events
 #define SK_EVT_FACTORY_RESET    0x01

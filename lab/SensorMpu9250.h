@@ -112,7 +112,7 @@ bool SensorMpu9250_gyroRead(uint16_t *rawData);
 float SensorMpu9250_gyroConvert(int16_t rawValue);
 
 bool SensorMpu9250_magTest(void);
-uint8_t SensorMpu9250_magRead(int16_t *pRawData);
+uint8_t (int16_t *pRawData);
 uint8_t SensorMpu9250_magStatus(void);
 void SensorMpu9250_magReset(void);
 

@@ -11,27 +11,13 @@ from model import (
     load_model,
     classify
 )
+from commons import (
+    MQTT_TOPIC_PREDICT,
+    MQTT_TOPIC_CLASSIFY,
+    URL_POST
+)
 
 model = None
-MQTT_TOPIC_CLASSIFY = "Group_B2/IMAGE/classify"
-MQTT_TOPIC_PREDICT = "Group_B2/IMAGE/predict"
-url = "http://127.0.0.1:3237/classify"
-url_post = "https://demoiot3237.herokuapp.com/add_data"
-
-classes = [
-    "daisy",
-    "dandelion",
-    "roses",
-    "sunflowers",
-    "tulips"
-]
-
-model = None
-# MODEL_NAME = "flowers.hd5"
-
-# session = tf.compat.v1.Session(
-#     graph = tf.compat.v1.Graph()
-# )
 
 def on_connect(client, userdata, flags, rc):
     if rc == 0:
@@ -44,40 +30,24 @@ def on_message(client, userdata, msg):
     print(msg.payload)
     recv_dict = json.loads(msg.payload)
     print(recv_dict)
-    acc_dict = {
-        "timecollect": round(recv_dict["Timestamp"]),
-        "acc_x_neck": recv_dict["accX_neck"],
-        "acc_y_neck": recv_dict["accY_neck"],
-        "acc_z_neck": recv_dict["accZ_neck"], 
-        "acc_x_back": recv_dict["accX_back"],
-        "acc_y_back": recv_dict["accY_back"],
-        "acc_z_back": recv_dict["accZ_back"], 
-        "acc_x_shoulder_l": recv_dict["accX_shoulder_l"],
-        "acc_y_shoulder_l": recv_dict["accY_shoulder_l"],
-        "acc_z_shoulder_l": recv_dict["accZ_shoulder_l"], 
-        "acc_x_shoulder_r": recv_dict["accX_shoulder_r"],
-        "acc_y_shoulder_r": recv_dict["accY_shoulder_r"],
-        "acc_z_shoulder_r": recv_dict["accZ_shoulder_r"], 
-    }            
+          
 
     """       
     MQTT      
-    """                                                             
-    print(acc_dict)                                  
-    send_dict = classify(acc_list_str=acc_dict)         
-    print(send_dict)     
-    client.publish(MQTT_TOPIC_CLASSIFY, json.dumps(send_dict))
-                                                               
+    """                          
+
+    class_dict = classify(recv_dict=recv_dict)         
+    print(class_dict)     
+    client.publish(MQTT_TOPIC_CLASSIFY, json.dumps(class_dict))
+    # Send dict should contain all the quaternion values from all 4 sensors, as well as the predicted classification.
+    send_dict = recv_dict | class_dict    
+
     #Send the request and get back the response into result
     """
     HTTP
     """
-    response = requests.put(url_post, params = acc_dict)
+    response = requests.put(URL_POST, params = send_dict)
     print(response)
-
-
-
-
 
 def setup(hostname):
     client = mqtt.Client()
@@ -89,18 +59,10 @@ def setup(hostname):
 
 def main():
     load_model()
-    # setup("13.59.198.52")
-    setup("127.0.0.1")
+    setup("13.59.198.52")
+    # setup("127.0.0.1")
     while True:
         pass
 
 if __name__ == "__main__":
     main()
-    # url = "https://demoiot3237.herokuapp.com/add_data"
-    # acc_dict = {
-    #     'timecollect':1,
-    #     'acc_x_neck':2,
-    #     'acc_y_neck':2,
-    #     'acc_z_neck':2,
-    # }
-    # requests.put(url, params = acc_dict)

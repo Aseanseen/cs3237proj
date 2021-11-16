@@ -7,7 +7,7 @@ extern "C"
 #endif
 
 #include "st_util.h"
-#define sampleFreq	205.0f		// sample frequency in Hz
+#define sampleFreq	100.0f		// sample frequency in Hz
 #define betaDef		0.1f		// 2 * proportional gain
 //----------------------------------------------------------------------------------------------------
 // Variable declaration

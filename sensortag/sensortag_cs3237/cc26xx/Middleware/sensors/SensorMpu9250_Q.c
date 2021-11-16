@@ -46,7 +46,9 @@
 #include "SensorOpt3001.h" // For reset of I2C bus
 #include "SensorUtil.h"
 #include "SensorI2C.h"
+#include <xdc/std.h>
 
+#include <xdc/runtime/System.h>
 /* -----------------------------------------------------------------------------
 *  Constants and macros
 * ------------------------------------------------------------------------------
@@ -241,13 +243,22 @@ static uint8_t val;
 //volatile float magScale[3] = {0, 0, 0};
 //volatile float magBias[3] = {0, 0, 0};
 
+// Lower Back
+// volatile float magCalX = 0, magCalY = 0, magCalZ = 0, magScaleX = 1.0000, magScaleY = 1.5333, magScaleZ = 0.7419, magBiasX = 360.2400, magBiasY = -206.7810, magBiasZ = -45.0753;
+// Middle Back
+volatile float magCalX = 0, magCalY = 0, magCalZ = 0, magScaleX = 1.3529, magScaleY = 1.1499, magScaleZ = 0.7187, magBiasX = 341.8608, magBiasY = -430.1373, magBiasZ = -663.4798;
+// Middle Back
+// volatile float gyroBiasX=-0.0992, gyroBiasY=1.0839,gyroBiasZ=0.3435, accelBiasX=0.0773, accelBiasY=0.0494,accelBiasZ=-0.0188;
 
-volatile float magCalX = 0, magCalY = 0, magCalZ = 0, magScaleX = 1.0, magScaleY = 1.0, magScaleZ = 1.0, magBiasX = 0.0, magBiasY = 0.0, magBiasZ = 0.0;
-volatile float gyroBiasX=0, gyroBiasY=0,gyroBiasZ=0, accelBiasX=0, accelBiasY=0,accelBiasZ=0;
+// Low Back
+// volatile float gyroBiasX=-0.8625, gyroBiasY=-0.2824,gyroBiasZ=0.6335, accelBiasX=0.0538, accelBiasY=0.0220,accelBiasZ=0.0404;
+
+// Neck
+volatile float gyroBiasX=-1.0076, gyroBiasY=0.8396,gyroBiasZ=2.4580, accelBiasX=0.0630, accelBiasY=0.0568,accelBiasZ=0.0067;
 
 // Magnetometer control
 static uint8_t scale = MFS_16BITS;      // 16 bit resolution
-static uint8_t mode = MAG_MODE_SINGLE;  // Operating mode
+static uint8_t mode = MAG_MODE_CONT1;  // Operating mode
 
 // Pins that are used by the MPU9250
 static PIN_Config MpuPinTable[] =
@@ -1046,9 +1057,9 @@ uint8_t SensorMpu9250_magRead(int16_t *data)
                 {
                     // Turn the MSB and LSB into a signed 16-bit value,
                     // data stored as little Endian
-                    data[0] = ((int16_t)rawData[1] << 8) | rawData[0];
-                    data[1] = ((int16_t)rawData[3] << 8) | rawData[2];
-                    data[2] = ((int16_t)rawData[5] << 8) | rawData[4];
+                    data[0] = (int16_t)(((int16_t)rawData[1] << 8) | rawData[0]);
+                    data[1] = (int16_t)(((int16_t)rawData[3] << 8) | rawData[2]);
+                    data[2] = (int16_t)(((int16_t)rawData[5] << 8) | rawData[4]);
 
                     // Sensitivity adjustment
                     // data[0] = data[0] * (uint8_t)magScale[0] >> 8 + (int16_t)1.0;
@@ -1120,7 +1131,8 @@ static void SensorMpu9250_Callback(PIN_Handle handle, PIN_Id pinId)
 }
 
 static bool _SensorI2C_writeReg(uint8_t addr, uint8_t data) {
-    return SensorI2C_writeReg(addr, &data, 1);
+    uint8_t val = data;
+    return SensorI2C_writeReg(addr, &val, 1);
 }
 
 
@@ -1128,13 +1140,16 @@ static bool _SensorI2C_writeReg(uint8_t addr, uint8_t data) {
 // of the at-rest readings and then loads the resulting offsets into accelerometer and gyro bias registers.
 void SensorMPU9250_calibrate_GyroAcc() {
 
-    //void SensorMPU9250_calibrate_all(float *dest1, float *dest2) {
     uint8_t data[12]; // data array to hold accelerometer and gyro x, y, z, data
     uint16_t ii, packet_count, fifo_count;
     int32_t gyro_bias[3] = {0, 0, 0}, accel_bias[3] = {0, 0, 0};
 
+    System_printf("hi\n");
+    System_flush();
+    if(!SENSOR_SELECT()) return;
     // reset device, reset all registers, clear gyro and accelerometer bias registers
-
+    System_printf("hi1");
+    System_flush();
     _SensorI2C_writeReg(PWR_MGMT_1, 0x80); // Write a one to bit 7 reset bit; toggle reset device
     DELAY_MS(100);
 
@@ -1171,6 +1186,8 @@ void SensorMPU9250_calibrate_GyroAcc() {
     // At end of sample accumulation, turn off FIFO sensor read
     _SensorI2C_writeReg(FIFO_EN, 0x00);        // Disable gyro and accelerometer sensors for FIFO
     SensorI2C_readReg(FIFO_COUNTH, &data[0], 2); // read FIFO sample count
+    System_printf("%d\n", data[0]);
+    System_flush();
     fifo_count = ((uint16_t)data[0] << 8) | data[1];
     packet_count = fifo_count/12;// How many sets of full gyro and accelerometer data for averaging
 
@@ -1271,6 +1288,9 @@ void SensorMPU9250_calibrate_GyroAcc() {
     accelBiasX = (float)accel_bias[0]/(float)accelsensitivity;
     accelBiasY = (float)accel_bias[1]/(float)accelsensitivity;
     accelBiasZ = (float)accel_bias[2]/(float)accelsensitivity;
+    SENSOR_DESELECT();
+    System_printf("GyroAccel cal vals 2: %f %f %f %f %f %f\n", accelBiasX, accelBiasY, accelBiasZ, gyroBiasX, gyroBiasY, gyroBiasZ);
+    System_flush();
 }
 
 void SensorMPU9250_calibrate_Mag()
@@ -1279,17 +1299,34 @@ void SensorMPU9250_calibrate_Mag()
     int32_t mag_bias[3] = {0, 0, 0}, mag_scale[3] = {0, 0, 0};
     int16_t mag_max[3] = {-32767, -32767, -32767}, mag_min[3] = {32767, 32767, 32767}, mag_temp[3] = {0, 0, 0};
     float _mRes = 10.0*4912.0/32760.0;
+
+
+
+    SensorMpu9250_powerOn();
+    if (!SensorMpu9250_init())
+    {
+        System_printf("SensorMPU9250_ cannot init!\n");
+        return;
+    }
+    // SensorMpu9250_accSetRange(ACC_RANGE_2G);
+
+    SensorMpu9250_enable(63);
+
     DELAY_MS(4000);
     
     // shoot for ~fifteen seconds of mag data
     if(mode == 0x02) sample_count = 128;  // at 8 Hz ODR, new mag data is available every 125 ms
     if(mode == 0x06) sample_count = 1500;  // at 100 Hz ODR, new mag data is available every 10 ms
     for(ii = 0; ii < sample_count; ii++) {
-        SensorMpu9250_magRead(&mag_temp[0]);
+        System_printf("Status %d\n", SensorMpu9250_magRead(mag_temp));
         for (int jj = 0; jj < 3; jj++) {
+            System_printf("%d ", mag_temp[jj]);
+
             if(mag_temp[jj] > mag_max[jj]) mag_max[jj] = mag_temp[jj];
             if(mag_temp[jj] < mag_min[jj]) mag_min[jj] = mag_temp[jj];
         }
+        System_printf("\n");
+        System_flush();
         if(mode == 0x02) DELAY_MS(135);  // at 8 Hz ODR, new mag data is available every 125 ms
         if(mode == 0x06) DELAY_MS(12);  // at 100 Hz ODR, new mag data is available every 10 ms
     }
@@ -1315,6 +1352,13 @@ void SensorMPU9250_calibrate_Mag()
     magScaleY = avg_rad/((float)mag_scale[1]);
     magScaleZ = avg_rad/((float)mag_scale[2]);
     
+
+
+    System_printf("Mag cal vals 1: %f %f %f %f %f %f\n", magBiasX, magBiasY, magBiasZ, magScaleX, magScaleY, magScaleZ);
+    System_printf("Mag cal vals 2: %f %f %f %f %f \n", magCalX, magCalY, magCalZ, accelBiasX, gyroBiasX);
+
+    System_flush();
+
 }
 
 

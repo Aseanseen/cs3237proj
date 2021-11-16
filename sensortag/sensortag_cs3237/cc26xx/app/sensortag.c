@@ -47,10 +47,7 @@
 /*******************************************************************************
  * INCLUDES
  */
-#include <string.h>
-#include <xdc/std.h>
 
-#include <xdc/runtime/System.h>
 #include <ti/sysbios/BIOS.h>
 #include <ti/sysbios/knl/Clock.h>
 #include <ti/sysbios/knl/Semaphore.h>
@@ -85,22 +82,22 @@
 // SensorTag on-board devices
 #include "st_util.h"
 
-#include "sensortag_tmp.h"
-#include "sensortag_hum.h"
-#include "sensortag_bar.h"
+//#include "sensortag_tmp.h"
+//#include "sensortag_hum.h"
+//#include "sensortag_bar.h"
 #include "sensortag_mov.h"
 #include "sensortag_quat.h"
-#include "sensortag_opt.h"
+//#include "sensortag_opt.h"
 #include "sensortag_keys.h"
 #include "sensortag_io.h"
 #include "sensortag_batt.h"
-#include "sensortag_audio.h"
+//#include "sensortag_audio.h"
 #include "sensortag_oad.h"
 #include "sensortag_conn_ctrl.h"
 
 // DevPack devices
-#include "sensortag_display.h"
-#include "sensortag_light.h"
+//#include "sensortag_display.h"
+//#include "sensortag_light.h"
 
 /*******************************************************************************
  * CONSTANTS
@@ -528,25 +525,25 @@ static void SensorTag_init(void)
   }
 #endif
 
-  // Sensor modules
-  SensorTagTmp_init();                            // IR temperature sensor
-  SensorTagHum_init();                            // Humidity sensor
-  SensorTagBar_init();                            // Pressure sensor
-//  SensorTagMov_init();                            // Movement processor
-  SensorTagOpt_init();                            // Optical sensor
+//  // Sensor modules
+//  SensorTagTmp_init();                            // IR temperature sensor
+//  SensorTagHum_init();                            // Humidity sensor
+//  SensorTagBar_init();                            // Pressure sensor
+////  SensorTagMov_init();                            // Movement processor
+//  SensorTagOpt_init();                            // Optical sensor
   SensorTagQuat_init();                           // Quat
 
   // Auxiliary modules
   SensorTagKeys_init();                           // Key and relay handling
   SensorTagIO_init();                             // IO (LED+buzzer+self test)
   SensorTagRegister_init();                       // Register Service
-  SensorTagAudio_init();                          // Voice Control
+//  SensorTagAudio_init();                          // Voice Control
   SensorTagOad_init();                            // Over the Air Download
 
 
   // DevPack devices
-  SensorTagDisplay_init();                        // Display DevPack
-  SensorTagLight_init();                          // LED Light Devpack
+//  SensorTagDisplay_init();                        // Display DevPack
+//  SensorTagLight_init();                          // LED Light Devpack
 
   // Start the Device
   GAPRole_StartDevice(&sensorTag_gapRoleCBs);
@@ -572,14 +569,18 @@ static void SensorTag_taskFxn(UArg a0, UArg a1)
   // Initialize application
   SensorTag_init();
 
+
   // Application main loop
   for (;;)
   {
+//      System_printf("Hello World!\n");
+//      System_flush();
     // Waits for a signal to the semaphore associated with the calling thread.
     // Note that the semaphore associated with a thread is signalled when a
     // message is queued to the message receive queue of the thread or when
     // ICall_signal() function is called onto the semaphore.
-    ICall_Errno errno = ICall_wait(ICALL_TIMEOUT_FOREVER);
+    // I want a limited time out
+    ICall_Errno errno = ICall_wait(10000);
 
     if (errno == ICALL_ERRNO_SUCCESS)
     {
@@ -624,7 +625,7 @@ static void SensorTag_taskFxn(UArg a0, UArg a1)
         SensorTagAudio_processEvent();
       }
 #endif
-      SensorTagOpt_processSensorEvent();
+//      SensorTagOpt_processSensorEvent();
 //      SensorTagMov_processSensorEvent();
       SensorTagQuat_processSensorEvent();
       SensorTagBatt_processSensorEvent();
@@ -867,18 +868,18 @@ static void SensorTag_processCharValueChangeEvt(uint8_t serviceID,
 {
   switch (serviceID)
   {
-  case SERVICE_ID_TMP:
-    SensorTagTmp_processCharChangeEvt(paramID);
-    break;
-
-  case SERVICE_ID_HUM:
-    SensorTagHum_processCharChangeEvt(paramID);
-    break;
-
-  case SERVICE_ID_BAR:
-    SensorTagBar_processCharChangeEvt(paramID);
-    break;
-
+//  case SERVICE_ID_TMP:
+//    SensorTagTmp_processCharChangeEvt(paramID);
+//    break;
+//
+//  case SERVICE_ID_HUM:
+//    SensorTagHum_processCharChangeEvt(paramID);
+//    break;
+//
+//  case SERVICE_ID_BAR:
+//    SensorTagBar_processCharChangeEvt(paramID);
+//    break;
+//
   case SERVICE_ID_MOV:
     SensorTagMov_processCharChangeEvt(paramID);
     break;
@@ -887,9 +888,9 @@ static void SensorTag_processCharValueChangeEvt(uint8_t serviceID,
     SensorTagQuat_processCharChangeEvt(paramID);
     break;
 
-  case SERVICE_ID_OPT:
-    SensorTagOpt_processCharChangeEvt(paramID);
-    break;
+//  case SERVICE_ID_OPT:
+//    SensorTagOpt_processCharChangeEvt(paramID);
+//    break;
 
   case SERVICE_ID_IO:
     SensorTagIO_processCharChangeEvt(paramID);
@@ -907,13 +908,13 @@ static void SensorTag_processCharValueChangeEvt(uint8_t serviceID,
     SensorTagConnControl_processCharChangeEvt(paramID);
     break;
 
-  case SERVICE_ID_DISPLAY:
-    SensorTagDisplay_processCharChangeEvt(paramID);
-    break;
-
-  case SERVICE_ID_LIGHT:
-      SensorTagLight_processCharChangeEvt(paramID);
-      break;
+//  case SERVICE_ID_DISPLAY:
+//    SensorTagDisplay_processCharChangeEvt(paramID);
+//    break;
+//
+//  case SERVICE_ID_LIGHT:
+//      SensorTagLight_processCharChangeEvt(paramID);
+//      break;
   default:
     break;
   }
@@ -1012,17 +1013,17 @@ static void SensorTag_enqueueMsg(uint8_t event, uint8_t serviceID, uint8_t param
  */
 static void SensorTag_resetAllModules(void)
 {
-  SensorTagTmp_reset();
-  SensorTagHum_reset();
-  SensorTagBar_reset();
+//  SensorTagTmp_reset();
+//  SensorTagHum_reset();
+//  SensorTagBar_reset();
 //  SensorTagMov_reset();
   SensorTagQuat_reset();
-  SensorTagOpt_reset();
+//  SensorTagOpt_reset();
   SensorTagBatt_reset();
   SensorTagIO_reset();
   SensorTagRegister_reset();
   SensorTagKeys_reset();
-  SensorTagLight_reset();
+//  SensorTagLight_reset();
 }
 
 /*!*****************************************************************************

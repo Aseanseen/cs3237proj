@@ -27,7 +27,8 @@ from commons.commons import (
     MODE_EXPORT_DATA, 
     MODE_RT_SCAN,
     PROJ_DIR,
-    IO_DIR
+    IO_DIR,
+    MQTT_TOPIC_PREDICT
 )
 
 from mqtt.controller import (
@@ -46,7 +47,6 @@ import csv
 import fasteners
 
 lock = fasteners.InterProcessLock('%s/tmp_lock_file' % IO_DIR)
-
 
 TIME_BETWEEN_READINGS = 0.1 # seconds
 PATH = "./samples"
@@ -296,7 +296,12 @@ class LEDAndBuzzer(Service):
 def on_disconnect(client: BleakClient):
     print(f"Disconnected from bleak {BLE_ADDR_TO_NAME[client.address]}!")
     
+
 async def run(address, postfix, flag, flags, mqtt_flag, warn_flag):
+    """
+    Main loop for each sensor. 
+    Collects sensor data in quaternions to be processed.
+    """
     global led_and_buzzer
 
     ble_client = BleakClient(address, timeout = 15)
@@ -316,6 +321,7 @@ async def run(address, postfix, flag, flags, mqtt_flag, warn_flag):
             try:
                 print("Starting listener for " + postfix)
                 await movement_sensor.start_listener(client)
+
             except Exception as e:
                 print("Fail to start bleak listener for " + postfix)
                 print(e)
@@ -390,7 +396,6 @@ async def run(address, postfix, flag, flags, mqtt_flag, warn_flag):
                 datalist["Timestamp"] = timestamp
 
                 # Write to json file
-                
                 json_object = json.dumps(datalist)
                 filename = postfix + ".json"
                 filepath = os.path.join(IO_DIR, filename)
@@ -408,6 +413,9 @@ async def run(address, postfix, flag, flags, mqtt_flag, warn_flag):
 # https://stackoverflow.com/questions/59073556/how-to-cancel-all-remaining-tasks-in-gather-if-one-fails
 
 async def main(mqtt_client, category):
+    """
+    Sets up flags, switches and tasks to be run.
+    """
     tasks = []
     while True:
         try:
@@ -467,7 +475,7 @@ async def main(mqtt_client, category):
                     )
                 ) for address in BLE_ADDR_LIST]
 
-            tasks.append(asyncio.ensure_future(mqtt_watcher(mqtt_client, mqtt_flags, category)))
+            tasks.append(asyncio.ensure_future(post_processing_watcher(mqtt_client, mqtt_flags, category)))
 
             # Wait for all tasks
             await asyncio.gather(*tasks)
@@ -490,6 +498,9 @@ async def main(mqtt_client, category):
 
 # Inteface with gateway ble functions
 def get_data_func():
+    """
+    Combines exported sensor data in json and returns a single collated dictionary
+    """
     filepaths = [os.path.join(IO_DIR, i+".json") for i in BLE_NAME_LIST]
         
     exists = [os.path.exists(filepath) for filepath in filepaths]
@@ -501,24 +512,31 @@ def get_data_func():
             with open(filepath, "r") as f:
                 dict_data = json.load(f)
                 send_dict.update(dict_data)
+
         return send_dict
     else:
         return
 
-async def mqtt_watcher(mqtt_client, mqtt_flags, category):
+async def post_processing_watcher(mqtt_client, mqtt_flags, category):
+    """
+    Handles data when available.
+    """
     while True:
         for f in mqtt_flags:
             await f.wait()
         for f in mqtt_flags:
             f.clear()
-        mqtt_send_data(mqtt_client, mqtt_flags, category)
 
-def mqtt_send_data(mqtt_client, mqtt_flags, category):
-    send_dict = get_data_func()
-    print(send_dict)
-    # mqtt_client.publish(MQTT_TOPIC_PREDICT, json.dumps(send_dict))
-    print("Published")
+        send_dict = get_data_func()
+        print(send_dict)
 
+        if mode == MODE_RT_SCAN:
+            mqtt_send_data(mqtt_client, send_dict)
+        else:
+            export_to_csv()
+
+
+def export_to_csv(send_dict):
     """
     This is for saving all the classification data to csv
     """
@@ -529,20 +547,33 @@ def mqtt_send_data(mqtt_client, mqtt_flags, category):
         send_dict.update({key: val_list})
     df = pd.DataFrame.from_dict(send_dict)
     df["category"] = category
-    # myCsvRow = df.values.flatten().tolist()
     myCsvRow = df.to_numpy().flatten().tolist()
 
-    # If the file already exists, append the row, if not create a new file and save
     if(os.path.exists(data_csv_path)):
+        # If the file already exists, append the row, if not create a new file and save
         save_df = pd.read_csv(data_csv_path)
         with open(data_csv_path,'a', newline='', encoding='utf-8') as fd:
             wr = csv.writer(fd, delimiter=',')
             print(myCsvRow)
             wr.writerow(myCsvRow)
     else:
+        # Append data to existing file.
         save_df = df
         save_df.to_csv(data_csv_path, index=False)
 
+
+def mqtt_send_data(mqtt_client, send_dict):
+    """
+    Handles time-instant results by committing result to MQTT server
+    """
+    # Commit results to MQTT
+    mqtt_client.publish(MQTT_TOPIC_PREDICT, json.dumps(send_dict))
+    print("Published")
+
+
+"""
+Setting up Async Exception Handling
+"""
 async def handleException():
     while not ble_queue.empty():
         client = await ble_queue.get()
@@ -555,11 +586,12 @@ def handleException_(loop, context):
     loop.close()        
 
 if __name__ == "__main__":
+    """
+    Main Function.
+    """
     print(PROJ_DIR)
-    """
-    To find the address, once your sensor tag is blinking the green led after pressing the button, run the discover.py
-    file which was provided as an example from bleak to identify the sensor tag device
-    """
+    # To find the address, once your sensor tag is blinking the green led after pressing the button, run the discover.py
+    # file which was provided as an example from bleak to identify the sensor tag device
     category = None
     # KW: https://github.com/hbldh/bleak/issues/345 
     

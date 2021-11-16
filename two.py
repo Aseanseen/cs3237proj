@@ -1,3 +1,4 @@
 if __name__ == "__main__":
-    while True:
-        print("hi2")
+    h = {"33" : "4"}
+    i = {"22" : "2"}
+    print(h|i)

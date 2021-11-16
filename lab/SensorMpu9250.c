@@ -362,7 +362,7 @@ bool SensorMpu9250_reset(void)
     if (ret)
     {
         // Initial configuration
-        SensorMpu9250_accSetRange(ACC_RANGE_8G);
+        SensorMpu9250_accSetRange(ACC_RANGE_4G);
         sensorMagInit();
 
         // Power save
@@ -981,13 +981,13 @@ bool SensorMpu9250_magTest(void)
 }
 
 /*******************************************************************************
-* @fn          SensorMpu9250_magRead
+* @fn          
 *
 * @brief       Read data from the compass - X, Y, Z - 3 words
 *
 * @return      Magnetometer status
 */
-uint8_t SensorMpu9250_magRead(int16_t *data)
+uint8_t (int16_t *data)
 {
     uint8_t val;
     uint8_t rawData[7];  // x/y/z compass register data, ST2 register stored here,

@@ -4,6 +4,7 @@
         "*.tcc": "cpp",
         "type_traits": "cpp",
         "sensormpu9250.h": "c",
-        "sensormpu9250_q.h": "c"
+        "sensormpu9250_q.h": "c",
+        "sensortag_keys.h": "c"
     }
 }

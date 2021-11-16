@@ -196,12 +196,13 @@ void SensorTagQuat_init(void)
 //  SensorMPU9250_calibrate_GyroAcc(gyroBias, accelBias);
   if (SensorMpu9250_init())
   {
-    SensorTagQuat_reset();
+    
     SensorTagBuzzer_open(hGpioPin);
     SensorTagBuzzer_setFrequency(2000);
-    SensorMPU9250_calibrate_GyroAcc();
-//    SensorMPU9250_calibrate_Mag();
+    // SensorMPU9250_calibrate_GyroAcc();
+    // SensorMPU9250_calibrate_Mag();
     SensorTagBuzzer_close();
+    SensorTagQuat_reset();
     SensorMpu9250_registerCallback(SensorTagQuat_processInterrupt);
   }
 

@@ -1,3 +1,4 @@
+from mqtt_broker.commons import DATA_KEY_CATEGORY, DATA_KEY_Q0_BACK_LOW, DATA_KEY_Q0_NECK, DATA_KEY_Q1_BACK_LOW, DATA_KEY_Q1_NECK, DATA_KEY_Q2_BACK_LOW, DATA_KEY_Q2_NECK, DATA_KEY_Q3_BACK_LOW, DATA_KEY_Q3_NECK, DATA_KEY_TIMESTAMP
 import paho.mqtt.client as mqtt
 import numpy as np
 from PIL import Image
@@ -6,6 +7,12 @@ from os import listdir
 from os.path import join
 from time import (
     sleep
+)
+from commons import (
+    DATA_KEY_Q0_BACK_MID,
+    DATA_KEY_Q1_BACK_MID, 
+    DATA_KEY_Q2_BACK_MID,
+    DATA_KEY_Q3_BACK_MID
 )
 
 PATH = "./samples"
@@ -16,43 +23,20 @@ SAMPLE_DATA_SIMPLE = [-0.06437778, -0.9050758, 0.42034901, -0.95735092,  0.03532
     0.66192558, -0.56875487,  0.48823398, -0.49501592, -0.52682804,  0.69094968]
 
 SAMPLE_DATA = {
-    "Timestamp": 1635240442.913178,
-    "accX_shoulder_l":1.3359375,
-    "accY_shoulder_l":-1.38330078125,
-    "accZ_shoulder_l":0.61767578125,
-    "magX_shoulder_l":-1.16729736328125,
-    "magY_shoulder_l":0.84686279296875,
-    "magZ_shoulder_l":0.7171630859375,
-    "gyroX_shoulder_l":-30.887423687423688,
-    "gyroY_shoulder_l":-117.4021978021978,
-    "gyroZ_shoulder_l":-20.99145299145299,
-    "accX_back":-1.94970703125,
-    "accY_back":0.0966796875,
-    "accZ_back":0.35205078125,
-    "magX_back":-0.9613037109375,
-    "magY_back":1.53350830078125,
-    "magZ_back":1.13677978515625,
-    "gyroX_back":-93.56190476190476,
-    "gyroY_back":65.67326007326007,
-    "gyroZ_back":30.43760683760684,
-    "accX_shoulder_r":-1.22412109375,
-    "accY_shoulder_r":-1.34130859375,
-    "accZ_shoulder_r":0.810546875,
-    "magX_shoulder_r":-0.2288818359375,
-    "magY_shoulder_r":-0.20599365234375,
-    "magZ_shoulder_r":0.23651123046875,
-    "gyroX_shoulder_r":236.15384615384613,
-    "gyroY_shoulder_r":8.546520146520146,
-    "gyroZ_shoulder_r":94.6114774114774,
-    "accX_neck":-0.19189453125,
-    "accY_neck":-1.42529296875,
-    "accZ_neck":1.31298828125,
-    "magX_neck":-0.83160400390625,
-    "magY_neck":0.17547607421875,
-    "magZ_neck":1.8768310546875,
-    "gyroX_neck":10.645665445665443,
-    "gyroY_neck":-29.388034188034187,
-    "gyroZ_neck":7.796825396825397
+    DATA_KEY_Q0_BACK_MID: 0.02391175925731659,
+    DATA_KEY_Q1_BACK_MID: -0.01958831213414669,
+    DATA_KEY_Q2_BACK_MID: -0.6926203370094299,
+    DATA_KEY_Q3_BACK_MID: 0.7182962894439697,
+    DATA_KEY_TIMESTAMP: 1637028607.169289,
+    DATA_KEY_Q0_BACK_LOW: -0.17328114807605743,
+    DATA_KEY_Q1_BACK_LOW: 0.3296964466571808,
+    DATA_KEY_Q2_BACK_LOW: -0.7871379852294922,
+    DATA_KEY_Q3_BACK_LOW:0.48842713236808777,
+    DATA_KEY_Q0_NECK: 0.7584683299064636,
+    DATA_KEY_Q1_NECK: -0.6471405029296875,
+    DATA_KEY_Q2_NECK: 0.05283760279417038,
+    DATA_KEY_Q3_NECK: -0.00035772108822129667,
+    DATA_KEY_CATEGORY: 3
 }
 
 def on_connect(client, userdata, flags, rc):
