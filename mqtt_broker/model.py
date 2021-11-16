@@ -1,6 +1,8 @@
 from flask import Flask, request, render_template
 import joblib
-from mqtt_broker.commons import CLASSIFICATION_TO_MQTT_CLASSIFICATION
+from commons import (
+    CLASSIFICATION_TO_MQTT_CLASSIFICATION
+)
 import numpy as np
 import json
 
