@@ -28,7 +28,9 @@ from commons.commons import (
     MODE_RT_SCAN,
     PROJ_DIR,
     IO_DIR,
-    MQTT_TOPIC_PREDICT
+    MQTT_TOPIC_PREDICT,
+    DATA_KEY_CATEGORY, 
+    DATA_KEY_TIMESTAMP
 )
 
 from mqtt.controller import (
@@ -67,12 +69,7 @@ from utils.ble_utils import (
 )
 
 from utils.utils import (
-    appendDataToDataframe,
-    getDataframeFromDatalist, 
-    loadDataframeFromCsv, 
-    saveDataframeToCsv,
     getTimeStamp,
-    getRowFromDatalists
 )
 
 class Service:
@@ -393,7 +390,7 @@ async def run(address, postfix, flag, flags, mqtt_flag, warn_flag):
                 sensor_val = movement_sensor.readings[1:]
                 zip_iter = zip(sensor_keys, sensor_val)
                 datalist = dict(zip_iter)
-                datalist["Timestamp"] = timestamp
+                datalist[DATA_KEY_TIMESTAMP] = timestamp
 
                 # Write to json file
                 json_object = json.dumps(datalist)
@@ -546,7 +543,7 @@ def export_to_csv(send_dict):
         val_list = [val]
         send_dict.update({key: val_list})
     df = pd.DataFrame.from_dict(send_dict)
-    df["category"] = category
+    df[DATA_KEY_CATEGORY] = category
     myCsvRow = df.to_numpy().flatten().tolist()
 
     if(os.path.exists(data_csv_path)):
