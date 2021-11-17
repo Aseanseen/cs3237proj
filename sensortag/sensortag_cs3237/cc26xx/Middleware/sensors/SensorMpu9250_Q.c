@@ -249,13 +249,13 @@ static uint8_t val;
 
 volatile float magCalX = 0, magCalY = 0, magCalZ = 0, magScaleX = 1.3529, magScaleY = 1.1499, magScaleZ = 0.7187, magBiasX = 341.8608, magBiasY = -430.1373, magBiasZ = -663.4798;
 // Middle Back
-//volatile float gyroBiasX=-0.0992, gyroBiasY=1.0839,gyroBiasZ=0.3435, accelBiasX=0.0773, accelBiasY=0.0494,accelBiasZ=-0.0188;
+volatile float gyroBiasX=-0.0992, gyroBiasY=1.0839,gyroBiasZ=0.3435, accelBiasX=0.0773, accelBiasY=0.0494,accelBiasZ=-0.0188;
 
 // Low Back
 //volatile float gyroBiasX=-0.8625, gyroBiasY=-0.2824,gyroBiasZ=0.6335, accelBiasX=0.0538, accelBiasY=0.0220,accelBiasZ=0.0404;
 
 // Neck
- volatile float gyroBiasX=-1.0076, gyroBiasY=0.8396,gyroBiasZ=2.4580, accelBiasX=0.0630, accelBiasY=0.0568,accelBiasZ=0.0067;
+// volatile float gyroBiasX=-1.0076, gyroBiasY=0.8396,gyroBiasZ=2.4580, accelBiasX=0.0630, accelBiasY=0.0568,accelBiasZ=0.0067;
 
 // Magnetometer control
 static uint8_t scale = MFS_16BITS;      // 16 bit resolution

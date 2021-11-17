@@ -30,13 +30,13 @@ def on_message(client, userdata, msg):
     print(msg.payload)
     recv_dict = json.loads(msg.payload)
     print(recv_dict)
-          
+    recv_list = list(recv_dict.values())
 
     """       
     MQTT      
     """                          
 
-    class_dict = classify(recv_dict=recv_dict)         
+    class_dict = classify(recv_dict=recv_list)         
     print(class_dict)     
     client.publish(MQTT_TOPIC_CLASSIFY, json.dumps(class_dict))
     # Send dict should contain all the quaternion values from all 4 sensors, as well as the predicted classification.
