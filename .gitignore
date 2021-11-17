@@ -1,3 +1,5 @@
 ml_model/.ipynb_checkpoints/train-checkpoint.ipynb
 *.pem
 __pycache__
+ml_model/.ipynb_checkpoints/train_quat_w_unknown-checkpoint.ipynb
+ml_model/.ipynb_checkpoints/train_quat-checkpoint.ipynb
