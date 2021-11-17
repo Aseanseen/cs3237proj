@@ -72,8 +72,10 @@ Arguments required:
 
 OR
 1. name
-2. timecollect
-3. classification
+2. start_time
+    - Must be in the form of datetime.datetime.timestamp
+3. end_time
+    - Must be in the form of datetime.datetime.timestamp
 
 Returns:
 
