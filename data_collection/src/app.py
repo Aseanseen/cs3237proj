@@ -219,83 +219,83 @@ async def main(mqtt_client, category):
     """
     tasks = []
     while True:
-    # try:
-        # This finds the bluetooth devices and will not exit untill all devices are visible. However, this does not connect to the devices.
-        while not await discover_sensors():
-            print("waiting for sensors")
+        try:
+            # This finds the bluetooth devices and will not exit untill all devices are visible. However, this does not connect to the devices.
+            while not await discover_sensors():
+                print("waiting for sensors")
 
-    
-        # Create flags for each sensor to signal whene each bleak client is connected for each sensor
-        neck_Flag = asyncio.Event()
-        back_low_Flag = asyncio.Event()
-        back_mid_Flag = asyncio.Event()
-        # flags = [neck_Flag, back_Flag, shoulder_r_Flag, shoulder_l_Flag]
-
-        # switcher is a switch case statement but in python
-        switcher = {
-            BLE_NAME_SENSOR_NECK: neck_Flag,
-            BLE_NAME_SENSOR_BACK_MID: back_mid_Flag,
-            BLE_NAME_SENSOR_BACK_LOW: back_low_Flag
-        }
-
-        switcher = {
-            BLE_NAME_SENSOR_NECK: neck_Flag,
-            BLE_NAME_SENSOR_BACK_MID: back_mid_Flag,
-            BLE_NAME_SENSOR_BACK_LOW: back_low_Flag
-        }
-
-        flags = [switcher[BLE_ADDR_TO_NAME[address]]for address in BLE_ADDR_LIST]
         
-        # Create flags for each sensor to signal whene each bleak client is connected for each sensor
-        mqtt_neck_Flag = asyncio.Event()
-        mqtt_back_low_Flag = asyncio.Event()
-        mqtt_back_mid_Flag = asyncio.Event()
+            # Create flags for each sensor to signal whene each bleak client is connected for each sensor
+            neck_Flag = asyncio.Event()
+            back_low_Flag = asyncio.Event()
+            back_mid_Flag = asyncio.Event()
+            # flags = [neck_Flag, back_Flag, shoulder_r_Flag, shoulder_l_Flag]
 
-        # mqtt_switcher is a switch case statement but in python
-        mqtt_switcher = {
-            BLE_NAME_SENSOR_NECK: mqtt_neck_Flag,
-            BLE_NAME_SENSOR_BACK_MID: mqtt_back_mid_Flag,
-            BLE_NAME_SENSOR_BACK_LOW: mqtt_back_low_Flag
-        }
+            # switcher is a switch case statement but in python
+            switcher = {
+                BLE_NAME_SENSOR_NECK: neck_Flag,
+                BLE_NAME_SENSOR_BACK_MID: back_mid_Flag,
+                BLE_NAME_SENSOR_BACK_LOW: back_low_Flag
+            }
 
-        mqtt_flags = [mqtt_switcher[BLE_ADDR_TO_NAME[address]]for address in BLE_ADDR_LIST]
+            switcher = {
+                BLE_NAME_SENSOR_NECK: neck_Flag,
+                BLE_NAME_SENSOR_BACK_MID: back_mid_Flag,
+                BLE_NAME_SENSOR_BACK_LOW: back_low_Flag
+            }
 
-        buzzer_Flag = asyncio.Event()
-        mqtt_client.user_data_set(buzzer_Flag)
+            flags = [switcher[BLE_ADDR_TO_NAME[address]]for address in BLE_ADDR_LIST]
+            
+            # Create flags for each sensor to signal whene each bleak client is connected for each sensor
+            mqtt_neck_Flag = asyncio.Event()
+            mqtt_back_low_Flag = asyncio.Event()
+            mqtt_back_mid_Flag = asyncio.Event()
 
-        # Create a list of tasks using list comprehension
-        tasks = [
-            asyncio.ensure_future(
-                run(
-                    address, 
-                    BLE_ADDR_TO_NAME[address], 
-                    switcher.get(BLE_ADDR_TO_NAME[address]), 
-                    [flags[i] for i in range(len(BLE_ADDR_LIST))], 
-                    mqtt_switcher.get(BLE_ADDR_TO_NAME[address]),
-                    buzzer_Flag
-                )
-            ) for address in BLE_ADDR_LIST]
+            # mqtt_switcher is a switch case statement but in python
+            mqtt_switcher = {
+                BLE_NAME_SENSOR_NECK: mqtt_neck_Flag,
+                BLE_NAME_SENSOR_BACK_MID: mqtt_back_mid_Flag,
+                BLE_NAME_SENSOR_BACK_LOW: mqtt_back_low_Flag
+            }
 
-        tasks.append(asyncio.ensure_future(post_processing_watcher(mqtt_client, mqtt_flags, category)))
+            mqtt_flags = [mqtt_switcher[BLE_ADDR_TO_NAME[address]]for address in BLE_ADDR_LIST]
 
-        # Wait for all tasks
-        await asyncio.gather(*tasks)
+            buzzer_Flag = asyncio.Event()
+            mqtt_client.user_data_set(buzzer_Flag)
 
-    # Any error, such as an unexpected disconnect from a device, will come here and restart the loop
-    # This disconnects from every sensor safely and reconnects again
+            # Create a list of tasks using list comprehension
+            tasks = [
+                asyncio.ensure_future(
+                    run(
+                        address, 
+                        BLE_ADDR_TO_NAME[address], 
+                        switcher.get(BLE_ADDR_TO_NAME[address]), 
+                        [flags[i] for i in range(len(BLE_ADDR_LIST))], 
+                        mqtt_switcher.get(BLE_ADDR_TO_NAME[address]),
+                        buzzer_Flag
+                    )
+                ) for address in BLE_ADDR_LIST]
 
-    # except (Exception, KeyboardInterrupt) as e:
-    #     print("Something messed up. Cancelling everything")
-    #     print(e)
-    #     for t in tasks:
-    #         t.cancel()
-    #     if mode == MODE_RT_SCAN:
-    #         print("Restarting loop in 5 seconds")
-    #         await asyncio.sleep(5)
-    #         print("Restarting...")
-    #         is_base_quat = True
-    #     else:
-    #         asyncio.get_event_loop.close()
+            tasks.append(asyncio.ensure_future(post_processing_watcher(mqtt_client, mqtt_flags, category)))
+
+            # Wait for all tasks
+            await asyncio.gather(*tasks)
+
+        # Any error, such as an unexpected disconnect from a device, will come here and restart the loop
+        # This disconnects from every sensor safely and reconnects again
+
+        except (Exception, KeyboardInterrupt) as e:
+            print("Something messed up. Cancelling everything")
+            print(e)
+            for t in tasks:
+                t.cancel()
+            if mode == MODE_RT_SCAN:
+                print("Restarting loop in 5 seconds")
+                await asyncio.sleep(5)
+                print("Restarting...")
+                is_base_quat = True
+            else:
+                asyncio.get_event_loop.close()
 
 
 # Inteface with gateway ble functions
@@ -303,6 +303,9 @@ def get_data_func():
     """
     Combines exported sensor data in json and returns a single collated dictionary
     """
+    global is_base_quat
+    print(is_base_quat)
+
     filepaths = [os.path.join(IO_DIR, i+".json") for i in BLE_NAME_LIST]
         
     exists = [os.path.exists(filepath) for filepath in filepaths]
@@ -312,16 +315,23 @@ def get_data_func():
         q_dict = {}
         send_dict = {}
         send_arr = None
-        for i in BLE_NAME_LIST:
-            filepath = os.path.join(IO_DIR, i+".json")
+        for name in BLE_NAME_LIST:
+            filepath = os.path.join(IO_DIR, name+".json")
             with open(filepath, "r") as f:
                 dict_data = json.load(f)
                 q_dict.update(dict_data)
-                print("Before:\n", q_dict)
-                curr_quats = np.array(q_dict[q] for q in DATA_KEY_QLIST[i])
-                send_arr = NP_Q.quad_diff(base_quats[i], curr_quats)
-                send_dict = dict(zip(DATA_KEY_QLIST[i], send_arr.tolist()))
-                print("After:\n", send_dict)
+                
+
+                if not is_base_quat:
+                    print("Before:\n", q_dict)
+                    curr_quats = np.array([q_dict[q] for q in DATA_KEY_QLIST[name]])
+                    print(1)
+                    send_arr = NP_Q.quad_diff(base_quats[name], curr_quats)
+                    print(2)
+                    send_dict = dict(zip(DATA_KEY_QLIST[name], send_arr.tolist()))
+                    print("After:\n", send_dict)
+                else:
+                    send_dict = q_dict
         return send_dict
     else:
         return
@@ -330,7 +340,8 @@ async def post_processing_watcher(mqtt_client, mqtt_flags, category):
     """
     Handles data when available.
     """
-    global base_quat_back_low, base_quat_back_mid, base_quat_back_neck
+    global base_quats, is_base_quat
+    print(is_base_quat)
     while True:
         for f in mqtt_flags:
             await f.wait()
@@ -340,17 +351,22 @@ async def post_processing_watcher(mqtt_client, mqtt_flags, category):
         send_dict = get_data_func()
         print(send_dict)
 
+        # Handle Sensor calibration
+        if mode == MODE_RT_SCAN and is_base_quat:
+            for name in BLE_NAME_LIST:
+                base_quats[name] = np.array([
+                send_dict[key] for key in DATA_KEY_QLIST[name]
+            ])
+            print("Calibrate: ", base_quats)
+            # After first time, don't calibrate again.
+            is_base_quat = False
+            continue
+
+        
+
         if mode == MODE_RT_SCAN:
-            if is_base_quat:
-                for name in BLE_NAME_LIST:
-                    base_quats[name] = np.array([
-                    send_dict[key] for key in DATA_KEY_QLIST[name]
-                ])
-                print("Calibrate: ", base_quats)
-                # After first time, don't calibrate again.
-                is_base_quat = False
-            else:
-                mqtt_send_data(mqtt_client, send_dict)
+            # mqtt_send_data(mqtt_client, send_dict)
+            pass
         else:
             export_to_csv()
 
@@ -435,7 +451,7 @@ if __name__ == "__main__":
 
     # Runs the loop forever since main() has a while True loop
     try:
-        # loop.set_exception_handler(handleException_)
+        loop.set_exception_handler(handleException_)
         loop.run_until_complete(main(mqtt_client, category))
         loop.run_forever()
         
