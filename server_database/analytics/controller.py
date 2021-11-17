@@ -8,10 +8,11 @@ from commons.commons import (
     CLASSIFICATION_ENUM_TO_NAME,
     MQTT_CLASSIFICATIONS
 )
-# import calmap
 
-STACK_BAR_PLOT_TITLE = "Stack Bar Plot of Postures"
-STACK_BAR_PLOT_PATH = "bar.png"
+from analytics.paths import(
+STACK_BAR_PLOT_TITLE,
+PIE_PLOT_TITLE
+)
 
 def get_plot(posture, dates):
     posture
@@ -48,11 +49,11 @@ def get_plot(posture, dates):
     plt.savefig("analytics.png")
 
 '''
-Given a dict where keys are the dates and values are the count of the types of postures in that day
+Given a dict where keys are the dates/hour and values are the count of the types of postures in that day/hour
 Plot a stack bar plot
 Save it into a png
 '''
-def get_stack_bar_plot(sum_dict):
+def get_stack_bar_plot(sum_dict, path):
     x = sum_dict.keys()
     y0 = np.array([item[0] for item in sum_dict.values()])
     y1 = np.array([item[1] for item in sum_dict.values()])
@@ -67,7 +68,7 @@ def get_stack_bar_plot(sum_dict):
     plt.bar(x, y4, bottom=sum(order[:4]), color='g')
     plt.title(STACK_BAR_PLOT_TITLE)
     plt.legend([CLASSIFICATION_ENUM_TO_NAME[classification] for classification in CLASSIFICATIONS])
-    plt.savefig(STACK_BAR_PLOT_PATH)
+    plt.savefig(path)
 
 # https://www.youtube.com/watch?v=cKMEL9xgq2I
 '''
@@ -84,7 +85,7 @@ Save it into a png
 '''
 Given a dict where keys are the dates and values are the count of the types of postures in that day
 Get the analysis of the time spent in each posture for each day
-Returns a dict
+Returns a dict where keys are dates, values are advice for that date
 
 Note: The dict passed in must have values where the classifation is in the same sequence as in CLASSIFICATIONS
 '''
@@ -96,18 +97,18 @@ def get_advice(sum_dict):
         advice = "Date: %s\n" %key
         # For every day, iterate through the postures
         for i in range(len(classes)):
-            advice += "[%s] : You were in this posture %.3f percent of the time!\n" % (classes[i], (value[i]/sum(value)))
+            advice += "[%s] : You were in this posture %.3f percent of the time!\n" % (classes[i], ((value[i]/sum(value)) * 100))
         res_dict[key] = advice
     return res_dict
 
 '''
 Given a dict where keys are the dates and values are the count of the types of postures in that day
-Get the all time average for each posture
+Get the all time sum for each posture
 Returns a dict
 
 Note: The dict passed in must have values where the classifation is in the same sequence as in CLASSIFICATIONS
 '''
-def get_ave(sum_dict):
+def get_sum(sum_dict):
     res_dict = {}
     sum_of_posture_percentage = [0 for classification in CLASSIFICATIONS]
     classes = [CLASSIFICATION_ENUM_TO_NAME[classification] for classification in CLASSIFICATIONS]
@@ -118,5 +119,21 @@ def get_ave(sum_dict):
             sum_of_posture_percentage[i] += (value[i] / sum(value))
     # Find the overall average percentage
     for i in range(len(classes)):
-        res_dict[classes[i]] = sum_of_posture_percentage[i] / len(sum_dict)
+        # res_dict[classes[i]] = sum_of_posture_percentage[i] / len(sum_dict)
+        res_dict[classes[i]] = sum_of_posture_percentage[i]
     return res_dict
+
+'''
+Given a dict where keys are the dates and values are the count of the types of postures in that day
+Get the all time average for each posture
+Plot a pie chart
+
+Note: The dict passed in must have values where the classifation is in the same sequence as in CLASSIFICATIONS
+'''
+def get_pie_plot(sum_dict, path):
+    res_dict = get_sum(sum_dict)
+    myexplode = [0.2 if i == CLASSIFICATION_PROPER else 0 for i in CLASSIFICATIONS]
+    plt.pie(res_dict.values(), labels = res_dict.keys(), explode = myexplode, autopct='%.1f%%', startangle = 90)
+    plt.title(PIE_PLOT_TITLE)
+    plt.legend(loc='upper left')
+    plt.savefig(path) 
