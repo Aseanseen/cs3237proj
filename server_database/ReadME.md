@@ -45,6 +45,7 @@ We run a Flask application on the server. Using Heroku addons, we create a Postg
 - get_stack_bar_plot_hour_bad_all
 - get_pie
 - get_pie_all
+- get_last
 - delete_user
 ---
 ### Adding data to database
@@ -210,6 +211,20 @@ Returns:
 Base64 String of the requested plot
 
 ---
+### Get last lag number of entries from the database
+>***get_last***
+---
+Type of request: `GET`
+
+Arguments required:
+1. name
+2. lag
+
+Returns:
+
+String of the last lag number of entries 
+
+---
 ### Delete all the data of a given name
 >***delete_user***
 ---
@@ -230,3 +245,5 @@ https://demoiot3237.herokuapp.com/get_stack_bar_plot_date_bad?name=Karthig&start
 https://demoiot3237.herokuapp.com/get_stack_bar_plot_hour_bad_all?name=Karthig
 
 https://demoiot3237.herokuapp.com/get_pie_all?name=Karthig
+
+https://demoiot3237.herokuapp.com/get_last?name=Karthig&lag=2
