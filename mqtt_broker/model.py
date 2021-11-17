@@ -20,10 +20,10 @@ def classify(recv_dict):
     
     model_input = np.array(input_array).reshape(1, -1)
 
-    try:
-        result = model.predict(model_input)[0]
-    except:
-        result = -1
+    # try:
+    result = model.predict(model_input)[0]
+    # except:
+        # result = -1
     
     max_index = np.argmax(result)
 

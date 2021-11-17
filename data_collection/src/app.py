@@ -68,6 +68,7 @@ calibrate_count = 0
 is_base_quat = True
 
 base_quats = {}
+delay_beep = 1000000
 
 from bleak import (
     BleakClient,
@@ -138,7 +139,7 @@ async def run(address, postfix, flag, flags, mqtt_flag, warn_flag):
         while True:
 
             if mode == MODE_RT_SCAN:
-                delay = 10
+                delay = 20
                 if calibrate_count < 5:
                     print("==================\n\nCollecting sample %d for calibration... Sit straight please!\n\n==================\n\n" % calibrate_count)
                     calibrate_count += 1                    
@@ -153,11 +154,12 @@ async def run(address, postfix, flag, flags, mqtt_flag, warn_flag):
 
             
             for i in range(delay):
-                if warn_flag.is_set() or (calibrate_count > 2 and calibrate_count < 5):
-                    print("haha")
-                    await led_and_buzzer.notify(client, 0x05)
-                else:
-                    await led_and_buzzer.notify(client, 0x02)
+                # if warn_flag.is_set() or (calibrate_count > 2 and calibrate_count < 5):
+                #     print("haha")
+                #     await led_and_buzzer.notify(client, 0x05)
+
+                # else:
+                #     await led_and_buzzer.notify(client, 0x02)
                 await asyncio.sleep(TIME_BETWEEN_READINGS) # Without await, the bleak listener cannot update the readings array, giving errors
 
             try:
@@ -318,20 +320,20 @@ def get_data_func():
         for name in BLE_NAME_LIST:
             filepath = os.path.join(IO_DIR, name+".json")
             with open(filepath, "r") as f:
-                dict_data = json.load(f)
-                q_dict.update(dict_data)
+                q_dict = json.load(f)
                 
 
                 if not is_base_quat:
                     print("Before:\n", q_dict)
                     curr_quats = np.array([q_dict[q] for q in DATA_KEY_QLIST[name]])
-                    print(1)
                     send_arr = NP_Q.quad_diff(base_quats[name], curr_quats)
-                    print(2)
-                    send_dict = dict(zip(DATA_KEY_QLIST[name], send_arr.tolist()))
-                    print("After:\n", send_dict)
+                    dict_data = dict(zip(DATA_KEY_QLIST[name], send_arr.tolist()))
+                    print("After:\n", dict_data)
                 else:
-                    send_dict = q_dict
+                    dict_data = q_dict
+
+            send_dict.update(dict_data)
+            print(send_dict)
         return send_dict
     else:
         return
@@ -368,7 +370,7 @@ async def post_processing_watcher(mqtt_client, mqtt_flags, category):
             mqtt_send_data(mqtt_client, send_dict)
             pass
         else:
-            export_to_csv()
+            export_to_csv(send_dict)
 
 
 def export_to_csv(send_dict):
@@ -401,6 +403,25 @@ def mqtt_send_data(mqtt_client, send_dict):
     """
     Handles time-instant results by committing result to MQTT server
     """
+    send_dict = {
+        "q0_back_mid" :   0.611628,
+        "q1_back_mid" :  -0.778918,
+        "q2_back_mid" :  -0.088285,
+        "q3_back_mid" :   0.091034,
+        "q0_back_low" :   0.197431,
+        "q1_back_low" :  -0.398458,
+        "q2_back_low" :   0.802965,
+        "q3_back_low" :  -0.392607,
+        "q0_neck" :   0.136262,
+        "q1_neck" :  -0.247323,
+        "q2_neck" :  -0.709695,
+        "q3_neck" :   0.642840,
+    }
+
+
+
+
+
     # Commit results to MQTT
     mqtt_client.publish(MQTT_TOPIC_PREDICT, json.dumps(send_dict))
     print("Published")
@@ -444,16 +465,16 @@ if __name__ == "__main__":
 
     loop = asyncio.get_event_loop()
 
-    # mqtt_client = setup("127.0.0.1")
+    mqtt_client = setup("127.0.0.1")
     
     # To interface with AWS MQTT
-    mqtt_client = setup("13.59.198.52")
+    # mqtt_client = setup("13.59.198.52")
 
     # Runs the loop forever since main() has a while True loop
     try:
-        loop.set_exception_handler(handleException_)
+        # loop.set_exception_handler(handleException_)
         loop.run_until_complete(main(mqtt_client, category))
-        loop.run_forever()
+        # loop.run_forever()
         
     # Something unexpected happened, whole program will close
     except (Exception, KeyboardInterrupt) as e:    
