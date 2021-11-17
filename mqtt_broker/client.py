@@ -60,13 +60,6 @@ def setup(hostname):
     client.connect(hostname)
     client.loop_start()
     return client
-      
-def load_image(filename):
-    img = Image.open(filename)
-    img = img.resize((249, 249))
-    imgarray = np.array(img) / 255.0
-    final = np.expand_dims(imgarray, axis = 0)
-    return final 
        
 def get_data_func():
     # To inteface with gateway ble functions

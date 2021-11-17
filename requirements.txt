@@ -119,6 +119,7 @@ slicer==0.0.7
 starlette==0.13.6
 threadpoolctl==2.1.0
 tifffile==2021.3.31
+tensorflow==2.6.0
 toml==0.10.2
 tornado==6.1
 tqdm==4.59.0
