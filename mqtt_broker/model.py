@@ -35,7 +35,7 @@ def classify(recv_dict):
 
 def load_model():
     global model 
-    filename = '../ml_model/model_nn_5'
+    filename = '../ml_model/model_nn_6'
     model = tf.keras.models.load_model(filename)
                                  
 
