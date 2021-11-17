@@ -35,33 +35,55 @@ We set up a Heroku server at: https://demoiot3237.herokuapp.com/
 We run a Flask application on the server. Using Heroku addons, we create a PostgreSQL database. We use Flask-SQLAlchemy to access the database easily.
 
 ## Possible actions
-- ADD_DATA_POSTFIX = "add_data"
-- STACK_BAR_PLOT_DATE_POSTFIX = "get_stack_bar_plot_date"
-- STACK_BAR_PLOT_DATE_BAD_POSTFIX = "get_stack_bar_plot_date_bad"
-- STACK_BAR_PLOT_HOUR_POSTFIX = "get_stack_bar_plot_hour"
-- STACK_BAR_PLOT_HOUR_ALL_POSTFIX = "get_stack_bar_plot_hour_all"
-- STACK_BAR_PLOT_HOUR_BAD_POSTFIX = "get_stack_bar_plot_hour_bad"
-- STACK_BAR_PLOT_HOUR_BAD_ALL_POSTFIX = "get_stack_bar_plot_hour_bad_all"
-- PIE_POSTFIX = "get_pie"
-- PIE_ALL_POSTFIX = "get_pie_all"
-- DELETE_USER_POSTFIX = "delete_user"
+- "add_data"
+- "get_data"
+- "get_stack_bar_plot_date"
+- "get_stack_bar_plot_date_bad"
+- "get_stack_bar_plot_hour"
+- "get_stack_bar_plot_hour_all"
+- "get_stack_bar_plot_hour_bad"
+- "get_stack_bar_plot_hour_bad_all"
+- "get_pie"
+- "get_pie_all"
+- "delete_user"
 ---
 ### Adding data to database
+>***"add_data"***
 ---
 Type of request: `PUT`
-
-ADD_DATA_POSTFIX = ***"add_data"***
 
 Arguments required:
 1. name
 2. timecollect
 3. classification
+
+Returns:
+
+New HTML page
+
+---
+### Visualising data from the database
+>***"get_data"***
+---
+Type of request: `GET`
+
+Arguments required:
+1. name
+
+OR
+1. name
+2. timecollect
+3. classification
+
+Returns:
+
+New HTML page
+
 ---
 ### Get stack bar plot with dates
+>***"get_stack_bar_plot_date"***
 ---
 Type of request: `GET`
-
-STACK_BAR_PLOT_DATE_POSTFIX = ***"get_stack_bar_plot_date"***
 
 Arguments required:
 1. name
@@ -69,12 +91,16 @@ Arguments required:
     - Must be in the form of datetime.datetime.timestamp
 3. end_time
     - Must be in the form of datetime.datetime.timestamp
+
+Returns:
+
+Base64 String of the requested plot
+
 ---
 ### Get stack bar plot with dates, but only showing bad posture
+>***"get_stack_bar_plot_date_bad"***
 ---
 Type of request: `GET`
-
-STACK_BAR_PLOT_DATE_BAD_POSTFIX = ***"get_stack_bar_plot_date_bad"***
 
 Arguments required:
 1. name
@@ -82,12 +108,16 @@ Arguments required:
     - Must be in the form of datetime.datetime.timestamp
 3. end_time
     - Must be in the form of datetime.datetime.timestamp
+
+Returns:
+
+Base64 String of the requested plot
+
 ---
 ### Get stack bar plot with hours
+>***"get_stack_bar_plot_hour"***
 ---
 Type of request: `GET`
-
-STACK_BAR_PLOT_HOUR_POSTFIX = ***"get_stack_bar_plot_hour"***
 
 Arguments required:
 1. name
@@ -95,21 +125,29 @@ Arguments required:
     - Must be in the form of datetime.datetime.timestamp
 3. end_time
     - Must be in the form of datetime.datetime.timestamp
+
+Returns:
+
+Base64 String of the requested plot
+
 ---
 ### Get stack bar plot with hours, all time record
+>***"get_stack_bar_plot_hour_all"***
 ---
 Type of request: `GET`
 
-STACK_BAR_PLOT_HOUR_ALL_POSTFIX = ***"get_stack_bar_plot_hour_all"***
-
 Arguments required:
 1. name
+
+Returns:
+
+Base64 String of the requested plot
+
 ---
 ### Get stack bar plot with hours, but only showing bad posture
+>***"get_stack_bar_plot_hour_bad"***
 ---
 Type of request: `GET`
-
-STACK_BAR_PLOT_HOUR_BAD_POSTFIX = ***"get_stack_bar_plot_hour_bad"***
 
 Arguments required:
 1. name
@@ -117,21 +155,29 @@ Arguments required:
     - Must be in the form of datetime.datetime.timestamp
 3. end_time
     - Must be in the form of datetime.datetime.timestamp
+
+Returns:
+
+Base64 String of the requested plot
+
 ---
 ### Get stack bar plot with hours, but only showing bad posture, all time record
+>***"get_stack_bar_plot_hour_bad_all"***
 ---
 Type of request: `GET`
 
-STACK_BAR_PLOT_HOUR_BAD_ALL_POSTFIX = ***"get_stack_bar_plot_hour_bad_all"***
-
 Arguments required:
 1. name
+
+Returns:
+
+Base64 String of the requested plot
+
 ---
 ### Get pie chart plot showing percentages of each classification
+>***"get_pie"***
 ---
 Type of request: `GET`
-
-PIE_POSTFIX = ***"get_pie"***
 
 Arguments required:
 1. name
@@ -139,12 +185,16 @@ Arguments required:
     - Must be in the form of datetime.datetime.timestamp
 3. end_time
     - Must be in the form of datetime.datetime.timestamp
+
+Returns:
+
+Base64 String of the requested plot
+
 ---
 ### Get pie chart plot showing percentages of each classification, all time record
+>***"get_pie_all"***
 ---
 Type of request: `GET`
-
-PIE_ALL_POSTFIX = ***"get_pie_all"***
 
 Arguments required:
 1. name
@@ -152,16 +202,28 @@ Arguments required:
     - Must be in the form of datetime.datetime.timestamp
 3. end_time
     - Must be in the form of datetime.datetime.timestamp
+
+Returns:
+
+Base64 String of the requested plot
+
 ---
 ### Delete all the data of a given name
+>***"delete_user"***
 ---
 Type of request: `DELETE`
 
-DELETE_USER_POSTFIX = ***"delete_user"***
-
 Arguments required:
 1. name
+
+Returns:
+
+None
+
 ---
 ## Examples for API
 
 https://demoiot3237.herokuapp.com/add_data?name=Karthig&timecollect=1640303800&classification=0
+https://demoiot3237.herokuapp.com/get_stack_bar_plot_date_bad?name=Karthig&start_time=1640303800&end_time=1640403800
+https://demoiot3237.herokuapp.com/get_stack_bar_plot_hour_bad_all?name=Karthig
+https://demoiot3237.herokuapp.com/get_pie_all?name=Karthig
