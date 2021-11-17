@@ -365,7 +365,7 @@ async def post_processing_watcher(mqtt_client, mqtt_flags, category):
         
 
         if mode == MODE_RT_SCAN:
-            # mqtt_send_data(mqtt_client, send_dict)
+            mqtt_send_data(mqtt_client, send_dict)
             pass
         else:
             export_to_csv()
