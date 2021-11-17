@@ -2,9 +2,10 @@ from flask import Flask , render_template, jsonify, request, redirect, url_for, 
 from flask_sqlalchemy import SQLAlchemy
 from commons.commons import CLASSIFICATION_ENUM_TO_NAME
 import datetime
+import numpy as np
 
 from analytics.controller import(
-get_plot,
+# get_plot,
 get_stack_bar_plot,
 # get_advice,
 get_sum,
@@ -39,8 +40,8 @@ from commons.commons import (
 app = Flask(__name__)
 
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///User.sqlite3'
-# app.config['SQLALCHEMY_DATABASE_URI'] = 'postgres://mfujthfmebgsad:39eadddca0737a0aefaf2c00568fcb6bcd96342f00d8dfcbe1e9fc82811c6c07@ec2-3-230-149-158.compute-1.amazonaws.com:5432/d6gkgi2oa7pokv'
+# app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///User.sqlite3'
+app.config['SQLALCHEMY_DATABASE_URI'] = 'postgres://mfujthfmebgsad:39eadddca0737a0aefaf2c00568fcb6bcd96342f00d8dfcbe1e9fc82811c6c07@ec2-3-230-149-158.compute-1.amazonaws.com:5432/d6gkgi2oa7pokv'
 
 db = SQLAlchemy(app)
 
@@ -60,7 +61,12 @@ class User(db.Model):
 		self.name = name
 		self.timecollect = timecollect
 		self.classification = classification
-		
+
+	def get_str(self):
+		s = "Name: " + self.name + "\n" +\
+			"Time: " + str(self.timecollect) + "\n" +\
+			"Classification: " + str(self.classification)
+		return s
 
 # Control will come here and then gets redirect to the index function
 @app.route("/")
@@ -160,8 +166,8 @@ def get_stack_bar_plot_date():
 			result[key] = [result[key].count(classification) for classification in CLASSIFICATIONS]
 
 		# Saves a stack bar plot to the path specified
-		get_stack_bar_plot(result, STACK_BAR_PLOT_DATE_PATH)
-		payload = get_base64string_from_img_path(STACK_BAR_PLOT_DATE_PATH)
+		payload = get_stack_bar_plot(result)
+		# payload = get_base64string_from_img_path(STACK_BAR_PLOT_DATE_PATH)
 		# advice = get_advice(result)
 
 		# # Sends a dict of 
@@ -218,8 +224,8 @@ def get_stack_bar_plot_date_bad():
 			result[key] = [result[key].count(classification) for classification in CLASSIFICATIONS]
 
 		# Saves a stack bar plot to the path specified
-		get_stack_bar_plot(result, STACK_BAR_PLOT_DATE_BAD_PATH)
-		payload = get_base64string_from_img_path(STACK_BAR_PLOT_DATE_BAD_PATH)
+		payload = get_stack_bar_plot(result)
+		# payload = get_base64string_from_img_path(STACK_BAR_PLOT_DATE_BAD_PATH)
 		# advice = get_advice(result)
 
 		# # Sends a dict of 
@@ -275,9 +281,9 @@ def get_stack_bar_plot_hour():
 			result[key] = [result[key].count(classification) for classification in CLASSIFICATIONS]
 
 		# Saves a stack bar plot to the path specified
-		get_stack_bar_plot(result, STACK_BAR_PLOT_HOUR_PATH)
+		payload = get_stack_bar_plot(result)
 
-		payload = get_base64string_from_img_path(STACK_BAR_PLOT_HOUR_PATH)
+		# payload = get_base64string_from_img_path(STACK_BAR_PLOT_HOUR_PATH)
 	return payload
 
 '''
@@ -319,9 +325,9 @@ def get_stack_bar_plot_hour_all():
 			result[key] = [result[key].count(classification) for classification in CLASSIFICATIONS]
 
 		# Saves a stack bar plot to the path specified
-		get_stack_bar_plot(result, STACK_BAR_PLOT_HOUR_ALL_PATH)
+		payload = get_stack_bar_plot(result)
 
-		payload = get_base64string_from_img_path(STACK_BAR_PLOT_HOUR_ALL_PATH)
+		# payload = get_base64string_from_img_path(STACK_BAR_PLOT_HOUR_ALL_PATH)
 	return payload
 
 '''
@@ -368,9 +374,9 @@ def get_stack_bar_plot_hour_bad():
 			result[key] = [result[key].count(classification) for classification in CLASSIFICATIONS]
 
 		# Saves a stack bar plot to the path specified
-		get_stack_bar_plot(result, STACK_BAR_PLOT_HOUR_BAD_PATH)
+		payload = get_stack_bar_plot(result)
 
-		payload = get_base64string_from_img_path(STACK_BAR_PLOT_HOUR_BAD_PATH)
+		# payload = get_base64string_from_img_path(STACK_BAR_PLOT_HOUR_BAD_PATH)
 	return payload
 
 '''
@@ -413,9 +419,9 @@ def get_stack_bar_plot_hour_bad_all():
 			result[key] = [result[key].count(classification) for classification in CLASSIFICATIONS]
 
 		# Saves a stack bar plot to the path specified
-		get_stack_bar_plot(result, STACK_BAR_PLOT_HOUR_BAD_ALL_PATH)
+		payload = get_stack_bar_plot(result)
 
-		payload = get_base64string_from_img_path(STACK_BAR_PLOT_HOUR_BAD_ALL_PATH)
+		# payload = get_base64string_from_img_path(STACK_BAR_PLOT_HOUR_BAD_ALL_PATH)
 	return payload
 
 # '''
@@ -503,9 +509,9 @@ def get_pie():
 		for key in result:
 			result[key] = [result[key].count(classification) for classification in CLASSIFICATIONS]
 
-		get_pie_plot(result, PIE_PATH)
+		payload = get_pie_plot(result)
 
-		payload = get_base64string_from_img_path(PIE_PATH)
+		# payload = get_base64string_from_img_path(PIE_PATH)
 	return payload
 
 '''
@@ -545,10 +551,41 @@ def get_pie_all():
 		for key in result:
 			result[key] = [result[key].count(classification) for classification in CLASSIFICATIONS]
 
-		get_pie_plot(result, PIE_ALL_PATH)
-
-		payload = get_base64string_from_img_path(PIE_ALL_PATH)
+		payload = get_pie_plot(result)
+		print(payload)
+		# payload = get_base64string_from_img_path(PIE_ALL_PATH)
 	return payload
+
+'''
+Given a lag variable
+Give a string of the data in the database
+'''
+def take_time(elem):
+	return elem.timecollect
+
+@app.route('/get_last', methods = ["GET"])
+def get_last():
+	if request.method == 'GET':
+		name = str(request.args.get("name"))
+		lag = int(request.args.get("lag"))
+		# Filter based on given params
+		entries_to_analyse = User.query.\
+			filter(User.name == name).\
+			all()
+
+		sorted_entries = sorted(entries_to_analyse, key=take_time, reverse=True)
+		entries = sorted_entries[:lag]
+
+		s = ""
+		for user in entries:
+			s += user.get_str() + "\n\n"
+		s = s.rstrip("\n\n")
+
+		# list_of_timestamp = np.array([user.timecollect for user in entries_to_analyse])
+		# idx = np.argpartition(list_of_timestamp, lag)
+		# for i in idx[:lag]:
+		# 	user = entries_to_analyse[i]
+	return s
 
 '''
 Given a name

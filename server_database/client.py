@@ -5,6 +5,7 @@ import datetime
 import time
 from commons import commons
 from random import randint
+import base64
 
 TEST_USER_1 = "Karthig"
 TEST_USER_2 = "Long"
@@ -22,6 +23,7 @@ STACK_BAR_PLOT_HOUR_BAD_ALL_POSTFIX = "get_stack_bar_plot_hour_bad_all"
 PIE_POSTFIX = "get_pie"
 PIE_ALL_POSTFIX = "get_pie_all"
 DELETE_USER_POSTFIX = "delete_user"
+LAST_POSTFIX = "get_last"
 
 def main():
     # test_get_stack_bar_plot_date(TEST_USER_1)
@@ -36,13 +38,21 @@ def main():
     # # time.sleep(10)
     # test_get_stack_bar_plot_hour_bad_all(TEST_USER_1)
     # time.sleep(10)
-    test_get_pie(TEST_USER_1)
+    # test_get_pie(TEST_USER_1)
     # time.sleep(5)
     # test_get_pie_all(TEST_USER_1)
 
     # delete_user(TEST_USER_1)
     # fill_with_1_day_1_user(TEST_USER_1)
     # fill_with_1_year_1_user(TEST_USER_1)
+    test_get_last(TEST_USER_1)
+
+def test_get_last(user):
+    dict_to_enter = {
+        "name" : user,
+        "lag" : 2
+    }
+    requests.get(url + LAST_POSTFIX, params=dict_to_enter)
 
 def test_get_stack_bar_plot_date(user):
     # fill_with_1_day_1_user(user)
