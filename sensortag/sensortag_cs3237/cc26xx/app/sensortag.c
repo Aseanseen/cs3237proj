@@ -95,6 +95,8 @@
 #include "sensortag_oad.h"
 #include "sensortag_conn_ctrl.h"
 
+#include <ti/drivers/watchdog/WatchdogCC26XX.h>
+#include <ti/drivers/Watchdog.h>
 // DevPack devices
 //#include "sensortag_display.h"
 //#include "sensortag_light.h"
@@ -317,6 +319,32 @@ static void SensorTag_clockHandler(UArg arg);
 static void SensorTag_enqueueMsg(uint8_t event, uint8_t serviceID, uint8_t paramID);
 static void SensorTag_callback(PIN_Handle handle, PIN_Id pinId);
 static void SensorTag_setDeviceInfo(void);
+
+static Watchdog_Handle hWDT;
+
+static void WatchdogApp__Callback(uintptr_t unused)
+{
+    // Indicate that we're entering factory reset
+    SensorTagIO_blinkLed(IOID_RED_LED, 10);
+    SensorTag_resetAllModules();
+    SensorTagFactoryReset_applyFactoryImage();
+}
+
+static void WatchdogApp__Init(void)
+{
+    Watchdog_Params params;
+    uint32_t tickValue;
+
+    Watchdog_Params_init(&params);
+    params.callbackFxn = WatchdogApp__Callback;
+    params.resetMode = Watchdog_RESET_OFF;
+    hWDT = Watchdog_open(0, &params);
+    // set timeout period to 100 ms
+    tickValue = Watchdog_convertMsToTicks(hWDT, 3000);
+    Watchdog_setReload(hWDT, tickValue);
+}
+
+
 
 /*******************************************************************************
  * PROFILE CALLBACKS
@@ -568,11 +596,14 @@ static void SensorTag_taskFxn(UArg a0, UArg a1)
 {
   // Initialize application
   SensorTag_init();
-
+//  WatchdogApp__Init();
+//  set_up_wdt();
 
   // Application main loop
   for (;;)
   {
+//      Watchdog_clear(hWDT);
+//    reset_wdt();
 //      System_printf("Hello World!\n");
 //      System_flush();
     // Waits for a signal to the semaphore associated with the calling thread.
