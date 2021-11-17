@@ -35,20 +35,20 @@ We set up a Heroku server at: https://demoiot3237.herokuapp.com/
 We run a Flask application on the server. Using Heroku addons, we create a PostgreSQL database. We use Flask-SQLAlchemy to access the database easily.
 
 ## Possible actions
-- "add_data"
-- "get_data"
-- "get_stack_bar_plot_date"
-- "get_stack_bar_plot_date_bad"
-- "get_stack_bar_plot_hour"
-- "get_stack_bar_plot_hour_all"
-- "get_stack_bar_plot_hour_bad"
-- "get_stack_bar_plot_hour_bad_all"
-- "get_pie"
-- "get_pie_all"
-- "delete_user"
+- add_data
+- get_data
+- get_stack_bar_plot_date
+- get_stack_bar_plot_date_bad
+- get_stack_bar_plot_hour
+- get_stack_bar_plot_hour_all
+- get_stack_bar_plot_hour_bad
+- get_stack_bar_plot_hour_bad_all
+- get_pie
+- get_pie_all
+- delete_user
 ---
 ### Adding data to database
->***"add_data"***
+>***add_data***
 ---
 Type of request: `PUT`
 
@@ -63,7 +63,7 @@ New HTML page
 
 ---
 ### Visualising data from the database
->***"get_data"***
+>***get_data***
 ---
 Type of request: `GET`
 
@@ -83,7 +83,7 @@ New HTML page
 
 ---
 ### Get stack bar plot with dates
->***"get_stack_bar_plot_date"***
+>***get_stack_bar_plot_date***
 ---
 Type of request: `GET`
 
@@ -100,7 +100,7 @@ Base64 String of the requested plot
 
 ---
 ### Get stack bar plot with dates, but only showing bad posture
->***"get_stack_bar_plot_date_bad"***
+>***get_stack_bar_plot_date_bad***
 ---
 Type of request: `GET`
 
@@ -117,7 +117,7 @@ Base64 String of the requested plot
 
 ---
 ### Get stack bar plot with hours
->***"get_stack_bar_plot_hour"***
+>***get_stack_bar_plot_hour***
 ---
 Type of request: `GET`
 
@@ -134,7 +134,7 @@ Base64 String of the requested plot
 
 ---
 ### Get stack bar plot with hours, all time record
->***"get_stack_bar_plot_hour_all"***
+>***get_stack_bar_plot_hour_all***
 ---
 Type of request: `GET`
 
@@ -147,7 +147,7 @@ Base64 String of the requested plot
 
 ---
 ### Get stack bar plot with hours, but only showing bad posture
->***"get_stack_bar_plot_hour_bad"***
+>***get_stack_bar_plot_hour_bad***
 ---
 Type of request: `GET`
 
@@ -164,7 +164,7 @@ Base64 String of the requested plot
 
 ---
 ### Get stack bar plot with hours, but only showing bad posture, all time record
->***"get_stack_bar_plot_hour_bad_all"***
+>***get_stack_bar_plot_hour_bad_all***
 ---
 Type of request: `GET`
 
@@ -177,7 +177,7 @@ Base64 String of the requested plot
 
 ---
 ### Get pie chart plot showing percentages of each classification
->***"get_pie"***
+>***get_pie***
 ---
 Type of request: `GET`
 
@@ -194,7 +194,7 @@ Base64 String of the requested plot
 
 ---
 ### Get pie chart plot showing percentages of each classification, all time record
->***"get_pie_all"***
+>***get_pie_all***
 ---
 Type of request: `GET`
 
@@ -211,7 +211,7 @@ Base64 String of the requested plot
 
 ---
 ### Delete all the data of a given name
->***"delete_user"***
+>***delete_user***
 ---
 Type of request: `DELETE`
 
@@ -225,7 +225,8 @@ None
 ---
 ## Examples for API
 
-https://demoiot3237.herokuapp.com/add_data?name=Karthig&timecollect=1640303800&classification=0
 https://demoiot3237.herokuapp.com/get_stack_bar_plot_date_bad?name=Karthig&start_time=1640303800&end_time=1640403800
+
 https://demoiot3237.herokuapp.com/get_stack_bar_plot_hour_bad_all?name=Karthig
+
 https://demoiot3237.herokuapp.com/get_pie_all?name=Karthig
