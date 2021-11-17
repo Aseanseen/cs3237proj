@@ -89,6 +89,36 @@ def add_data():
 
 '''
 Given a start timestamp, end timestamp, name
+Show the filtered results in html
+'''
+@app.route('/get_data', methods = ["GET"])
+def get_data():
+	if request.method == 'GET':
+		name = str(request.args.get("name"))
+		start_time = request.args.get("start_time")
+		end_time = request.args.get("end_time")
+
+		if name and (not start_time) and (not end_time):
+			# Filter based on given params
+			entries_to_analyse = User.query.\
+				filter(User.name == name).\
+				all()
+			list_of_date = [datetime.datetime.fromtimestamp(user.timecollect).date() for user in entries_to_analyse]
+			return render_template("demo3237.html", user_data = entries_to_analyse, list_of_date = list_of_date)
+		else:
+			start_time = int(start_time)
+			end_time = int(end_time)
+			# Filter based on given params
+			entries_to_analyse = User.query.\
+				filter(User.name == name).\
+				filter(User.timecollect >= start_time).\
+				filter(User.timecollect <= end_time).\
+				all()
+			list_of_date = [datetime.datetime.fromtimestamp(user.timecollect).date() for user in entries_to_analyse]
+			return render_template("demo3237.html", user_data = entries_to_analyse, list_of_date = list_of_date)
+
+'''
+Given a start timestamp, end timestamp, name
 Give the stack bar plot of the date
 Give the percentage of time in each posture
 '''
