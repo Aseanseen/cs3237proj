@@ -40,8 +40,8 @@ from commons.commons import (
 app = Flask(__name__)
 
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-# app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///User.sqlite3'
-app.config['SQLALCHEMY_DATABASE_URI'] = 'postgres://mfujthfmebgsad:39eadddca0737a0aefaf2c00568fcb6bcd96342f00d8dfcbe1e9fc82811c6c07@ec2-3-230-149-158.compute-1.amazonaws.com:5432/d6gkgi2oa7pokv'
+app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///User.sqlite3'
+# app.config['SQLALCHEMY_DATABASE_URI'] = 'postgres://mfujthfmebgsad:39eadddca0737a0aefaf2c00568fcb6bcd96342f00d8dfcbe1e9fc82811c6c07@ec2-3-230-149-158.compute-1.amazonaws.com:5432/d6gkgi2oa7pokv'
 
 db = SQLAlchemy(app)
 
@@ -64,15 +64,15 @@ class User(db.Model):
 
 	def get_str(self):
 		s = "Name: " + self.name + "\n" +\
-			"Time: " + str(self.timecollect) + "\n" +\
+			"Date Time: " + datetime.datetime.fromtimestamp(self.timecollect).strftime("%Y-%m-%d %H:%M:%S") + "\n" +\
 			"Classification: " + str(self.classification)
 		return s
 
 # Control will come here and then gets redirect to the index function
 @app.route("/")
 def home():
-	list_of_date = [datetime.datetime.fromtimestamp(user.timecollect).date() for user in User.query.all()]
-	return render_template("demo3237.html", user_data = User.query.all(), list_of_date = list_of_date)
+	list_of_datetime = [datetime.datetime.fromtimestamp(user.timecollect).strftime("%Y-%m-%d %H:%M:%S") for user in User.query.all()]
+	return render_template("demo3237.html", user_data = User.query.all(), list_of_datetime = list_of_datetime)
 
 '''
 Given a name, timestamp, sensor data, classification
@@ -90,7 +90,7 @@ def add_data():
 		db.session.commit()
 
 		user_data = User.query.all()
-		list_of_date = [datetime.datetime.fromtimestamp(user.timecollect).date() for user in user_data]
+		list_of_date = [datetime.datetime.fromtimestamp(user.timecollect).strftime("%Y-%m-%d %H:%M:%S") for user in user_data]
 		return render_template("demo3237.html", user_data = user_data, list_of_date = list_of_date)
 
 '''
@@ -552,7 +552,7 @@ def get_pie_all():
 			result[key] = [result[key].count(classification) for classification in CLASSIFICATIONS]
 
 		payload = get_pie_plot(result)
-		print(payload)
+		# print(payload)
 		# payload = get_base64string_from_img_path(PIE_ALL_PATH)
 	return payload
 
