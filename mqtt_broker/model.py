@@ -31,17 +31,20 @@ def classify(recv_dict):
     for pf in postfix:
         y, p, r = getEulerAngles([recv_dict[i + pf] for i in q_ls])
     
-    if abs(r) < 180 - 30:
+    print("Yaw: %f\nPitch: %f\nRoll: %f\n" % (y, p, r))
+
+    if abs(r) < 90 - 15:
         answer_dict['classification'] = MQTT_CLASSIFICATION_FORWARD
-    elif abs(r) > 180 + 30:
+    elif abs(r) > 90 + 15:
         answer_dict['classification'] = MQTT_CLASSIFICATION_BACKWARD
     else:
-        if p < 0 - 17:
-            answer_dict['classification'] = MQTT_CLASSIFICATION_LEFT
-        elif p > 0 + 17: 
+        if p < 0 - 10:
             answer_dict['classification'] = MQTT_CLASSIFICATION_RIGHT
+        elif p > 0 + 10: 
+            answer_dict['classification'] = MQTT_CLASSIFICATION_LEFT
         else: 
             answer_dict['classification'] = MQTT_CLASSIFICATION_PROPER
+
     return answer_dict
 
 def load_model():

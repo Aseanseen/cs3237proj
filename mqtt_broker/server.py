@@ -41,7 +41,7 @@ def on_message(client, userdata, msg):
     client.publish(MQTT_TOPIC_CLASSIFY, json.dumps(class_dict))
     # Send dict should contain all the quaternion values from all 4 sensors, as well as the predicted classification.
     send_dict = {**recv_dict, **class_dict}    
-
+    print(send_dict)
     #Send the request and get back the response into result
     """
     HTTP
@@ -59,8 +59,8 @@ def setup(hostname):
 
 def main():
     load_model()
-    setup("13.59.198.52")
-    # setup("127.0.0.1")
+    # setup("13.59.198.52")
+    setup("127.0.0.1")
     while True:
         pass
 
