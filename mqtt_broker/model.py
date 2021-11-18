@@ -35,7 +35,13 @@ def classify(recv_dict):
 
 def load_model():
     global model 
-    filename = '../ml_model/model_nn_5'
-    model = tf.keras.models.load_model(filename)
-                                 
+    import sys
+    if sys.argv[1] == 1:
+        model = joblib.load("modeldt1.joblib")
+    elif sys.argv[1] == 6:
+        filename = '../ml_model/model_nn_6'
+        model = tf.keras.models.load_model(filename)
+    elif sys.argv[1] == 5:
+        filename = '../ml_model/model_nn_6'
+        model = tf.keras.models.load_model(filename)                  
 
