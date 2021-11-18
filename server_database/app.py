@@ -34,14 +34,15 @@ from commons.commons import (
 	CLASSIFICATION_BACKWARD, 
 	CLASSIFICATION_LEFT, 
 	CLASSIFICATION_RIGHT,
-	CLASSIFICATIONS
+	CLASSIFICATIONS,
+	CLASSIFICATION_ENUM_TO_NAME
 )
 
 app = Flask(__name__)
 
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///User.sqlite3'
-# app.config['SQLALCHEMY_DATABASE_URI'] = 'postgres://mfujthfmebgsad:39eadddca0737a0aefaf2c00568fcb6bcd96342f00d8dfcbe1e9fc82811c6c07@ec2-3-230-149-158.compute-1.amazonaws.com:5432/d6gkgi2oa7pokv'
+# app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///User.sqlite3'
+app.config['SQLALCHEMY_DATABASE_URI'] = 'postgres://mfujthfmebgsad:39eadddca0737a0aefaf2c00568fcb6bcd96342f00d8dfcbe1e9fc82811c6c07@ec2-3-230-149-158.compute-1.amazonaws.com:5432/d6gkgi2oa7pokv'
 
 db = SQLAlchemy(app)
 
@@ -65,7 +66,7 @@ class User(db.Model):
 	def get_str(self):
 		s = "Name: " + self.name + "\n" +\
 			"Date Time: " + datetime.datetime.fromtimestamp(self.timecollect).strftime("%Y-%m-%d %H:%M:%S") + "\n" +\
-			"Classification: " + str(self.classification)
+			"Classification: " + str(CLASSIFICATION_ENUM_TO_NAME[self.classification])
 		return s
 
 # Control will come here and then gets redirect to the index function

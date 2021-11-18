@@ -222,7 +222,10 @@ Arguments required:
 
 Returns:
 
-String of the last lag number of entries 
+String of the last lag number of entries
+Name:
+Date Time: %Y-%m-%d %H:%M:%S
+Classification:
 
 ---
 ### Delete all the data of a given name
