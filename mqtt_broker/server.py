@@ -14,7 +14,8 @@ from model import (
 from commons import (
     MQTT_TOPIC_PREDICT,
     MQTT_TOPIC_CLASSIFY,
-    URL_POST
+    URL_POST,
+    DATA_KEY_TIMESTAMP,
 )
 
 model = None
@@ -41,6 +42,13 @@ def on_message(client, userdata, msg):
     client.publish(MQTT_TOPIC_CLASSIFY, json.dumps(class_dict))
     # Send dict should contain all the quaternion values from all 4 sensors, as well as the predicted classification.
     send_dict = {**recv_dict, **class_dict}    
+
+    send_dict = {
+        "name" : "Kai Wen",
+        "timecollect" : recv_dict[DATA_KEY_TIMESTAMP],
+        "classification" : class_dict["classification"]
+    }
+
     print(send_dict)
     #Send the request and get back the response into result
     """

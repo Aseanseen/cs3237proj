@@ -2,11 +2,11 @@ from flask import Flask, request, render_template
 import joblib
 from commons import (
     CLASSIFICATION_TO_MQTT_CLASSIFICATION,
-    MQTT_CLASSIFICATION_BACKWARD,
-    MQTT_CLASSIFICATION_FORWARD,
-    MQTT_CLASSIFICATION_LEFT,
-    MQTT_CLASSIFICATION_PROPER,
-    MQTT_CLASSIFICATION_RIGHT
+    CLASSIFICATION_BACKWARD,
+    CLASSIFICATION_FORWARD,
+    CLASSIFICATION_LEFT,
+    CLASSIFICATION_PROPER,
+    CLASSIFICATION_RIGHT
 )
 import numpy as np
 import json
@@ -34,16 +34,16 @@ def classify(recv_dict):
     print("Yaw: %f\nPitch: %f\nRoll: %f\n" % (y, p, r))
 
     if abs(r) < 90 - 15:
-        answer_dict['classification'] = MQTT_CLASSIFICATION_FORWARD
+        answer_dict['classification'] = CLASSIFICATION_FORWARD
     elif abs(r) > 90 + 15:
-        answer_dict['classification'] = MQTT_CLASSIFICATION_BACKWARD
+        answer_dict['classification'] = CLASSIFICATION_BACKWARD
     else:
         if p < 0 - 10:
-            answer_dict['classification'] = MQTT_CLASSIFICATION_RIGHT
+            answer_dict['classification'] = CLASSIFICATION_RIGHT
         elif p > 0 + 10: 
-            answer_dict['classification'] = MQTT_CLASSIFICATION_LEFT
+            answer_dict['classification'] = CLASSIFICATION_LEFT
         else: 
-            answer_dict['classification'] = MQTT_CLASSIFICATION_PROPER
+            answer_dict['classification'] = CLASSIFICATION_PROPER
 
     return answer_dict
 

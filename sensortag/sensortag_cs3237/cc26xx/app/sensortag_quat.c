@@ -193,7 +193,6 @@ void SensorTagQuat_init(void)
   appState = APP_STATE_OFF;
   nMotions = 0;
 
-//  SensorMPU9250_calibrate_GyroAcc(gyroBias, accelBias);
   if (SensorMpu9250_init())
   {
     
@@ -298,11 +297,8 @@ void SensorTagQuat_processSensorEvent(void)
         {
           nActivity--;
         }
-        // printf("weep\n");
         readQuatData(sensorData);
         updateQuatData();
-        // Send data
-        // Quat_setParameter(SENSOR_DATA, SENSOR_DATA_LEN, sensorData);
       }
       else
       {
@@ -462,7 +458,6 @@ static void sensorChangeCB(uint8_t paramID)
 {
   // Wake up the application thread
   SensorTag_charValueChangeCB(SERVICE_ID_QUAT, paramID);
-  // updateQuatData();
 }
 
 
