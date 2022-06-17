@@ -2,7 +2,7 @@
 ## Motivation
 Bad posture is an ever-prevalent problem amongst people from all age groups in their everyday life. This paper aims to implement an Internet-of-Things solution that enables users to be informed of their sitting habits so that they can correct any bad habits before they manifest themselves as back problems. Our solution provides users with real-time notifications when their sitting posture is incorrect. It also implements long-term analytics to allow users to be better informed of their posture over time. Overall, our solution not only detects erroneous sitting posture with high accuracy, but also energy efficient.
 ## Architecture
-![alt text](https://github.com/Aseanseen/cs3237proj/blob/master/Architecture.jpg?raw=true)\
+![alt text](https://github.com/Aseanseen/cs3237proj/blob/master/pics/Architecture.jpg?raw=true)\
 As seen from the figure above, we have a total of 3 sensor tags. The sensor tags send data to our laptop which acts as a BLE gateway and MQTT client. The MQTT client on the laptop communicates with the MQTT Broker on our AWS EC2 instance. This broker then sends data to the Flask application on Heroku using a HTTP PUT request. In addition, we have an Android phone app that uses HTTP GET requests to get charts reflecting a user’s sitting posture. This makes it simple and easy for the users to view their sitting posture habits.
 ## Implementation
 **TI CC2650 SensorTag**
@@ -24,7 +24,7 @@ The MQTT broker is deployed on an AWS EC2 instance. It receives the quaternions 
 
 **Backend Server - Long term analytics**
 The MQTT broker sends PUT requests to the Flask application once it gets new data from the MQTT client. Flask is a micro web framework written in Python. Using Heroku addons, we create a PostgreSQL database and use Flask-SQLAlchemy to access the database easily.\
-![alt text](https://github.com/Aseanseen/cs3237proj/blob/master/Flask.jpg?raw=true)\
+![alt text](https://github.com/Aseanseen/cs3237proj/blob/master/pics/Flask.jpg?raw=true)\
 As shown in the figure above, the database contains the user’s name, timestamp of the reading and the classification of that reading. The Flask API we have created consists of many functions, aimed at generating plots that are easy to understand. 
 
 The full list of functions are as follows:
@@ -42,7 +42,7 @@ The full list of functions are as follows:
 - Delete all the data of a given name: `DELETE`
 
 Examples of the plots are shown in the figures below.\
-![alt text](https://github.com/Aseanseen/cs3237proj/blob/master/Plots.jpg?raw=true)\
+![alt text](https://github.com/Aseanseen/cs3237proj/blob/master/pics/Plots.jpg?raw=true)\
 
 These plots are then written into Python’s BytesIO objects, then into base64 strings which are given to the mobile app.
 
@@ -50,7 +50,7 @@ These plots are then written into Python’s BytesIO objects, then into base64 s
 The mobile app is created so that users are able to conveniently access the analytics from their phone. The user interface of the app is also made to be simple to allow users to be able to navigate through the app with ease.
 The mobile app is able to retrieve data from the heroku database using GET requests as shown in section 4.4. For GET requests involving dates, the time is retrieved from the system using Java and is then converted to python format and sent as a parameter to the GET request. A new thread has to be created for every GET request. This is due to the nature of android studio which does not allow internet functions to be programmed into the same thread as the app. 
 There are 2 kinds of analytics that users are able to view in the app, the long term and the short term analytics. The long term analytics includes pie charts and bar charts of every data related to the user in the heroku database. The short term analytics also includes the pie and bar charts but they only visualize the previous 7 days of available data found in the Heroku database.\
-![alt text](https://github.com/Aseanseen/cs3237proj/blob/master/App.jpg?raw=true)\
+![alt text](https://github.com/Aseanseen/cs3237proj/blob/master/pics/App.jpg?raw=true)\
 Figure 14 shows an example of a pie chart, The bar chart is similar to this user interface. Users will have to press the refresh button to update the charts if new data has been added to the Heroku database. Additionally, users are able to view the latest 3 data uploaded to the heroku server in the short term analytics in text format. Figure 15 shows the format of the raw data shown in the app. 
 
 # My contributions
