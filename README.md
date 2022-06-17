@@ -2,7 +2,7 @@
 ## Motivation
 Bad posture is an ever-prevalent problem amongst people from all age groups in their everyday life. This paper aims to implement an Internet-of-Things solution that enables users to be informed of their sitting habits so that they can correct any bad habits before they manifest themselves as back problems. Our solution provides users with real-time notifications when their sitting posture is incorrect. It also implements long-term analytics to allow users to be better informed of their posture over time. Overall, our solution not only detects erroneous sitting posture with high accuracy, but also energy efficient.
 ## Architecture
-![alt text](https://github.com/Aseanseen/cs3237proj/blob/master/pics/Architecture.jpg?raw=true)\
+![alt text](https://raw.githubusercontent.com/Aseanseen/cs3237proj/master/pics/Architecture.png)\
 As seen from the figure above, we have a total of 3 sensor tags. The sensor tags send data to our laptop which acts as a BLE gateway and MQTT client. The MQTT client on the laptop communicates with the MQTT Broker on our AWS EC2 instance. This broker then sends data to the Flask application on Heroku using a HTTP PUT request. In addition, we have an Android phone app that uses HTTP GET requests to get charts reflecting a user’s sitting posture. This makes it simple and easy for the users to view their sitting posture habits.
 ## Implementation
 **TI CC2650 SensorTag**
